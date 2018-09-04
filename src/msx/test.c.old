@@ -1,0 +1,357 @@
+#include "conio.h"
+#include "dos.h"
+
+#define REPEAT2(a)  { {a}; {a}; }
+#define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
+#define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
+#define REPEAT16(a) { REPEAT8(a);  REPEAT8(a);  }
+#define REPEAT32(a) { REPEAT16(a); REPEAT16(a); }
+
+	const char mapInfo[] = 
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+"a                                                                                                                              a"
+"a                                                                                                                              a"
+"a                                                                                                                              a"
+"                                                                                                                               a"
+"                     aaaaaaa                                                                                                   a"
+"                                                                                                                               a"
+"a                                                                                                                              a"
+"a                                                                                                                              a"
+"a                     aaaaaa                                                                                                   a"
+"a   aaaaa a                                                                                                                    a"
+"a                                                                                                                              a"
+"a                                                                                                                              a"
+"a              aaaaa a                                                                                                         a"
+"a                                                                                                                              a"
+"a     aaaaa           a a aa  aaa        aaaa                                                                                  a"
+"a                                a   a       a                                                                                 a"
+"a            aaaaaa                aaa       a                                                                                 a"
+"a                               a                                                                                              a"
+"a                        a  a             a a                                                                                  a"
+"a    aaaaa                a    a          a                                                                                    a"
+"a                                        aa      aaaa                                                                          a"
+"a                                 aaaa                                                                                         a"
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+
+#define N_SPRITES 32
+#define TILE_WIDTH 32
+#define TILE_HEIGHT 24
+
+
+typedef struct {
+	uint8_t x,y;
+	uint8_t pattern;
+	uint8_t color;
+} Sprite;
+
+
+
+typedef struct {
+	int16_t x,y,dx,dy;
+} TRect16;
+
+typedef struct {
+	uint8_t x,y;
+} uint8_tp;
+
+typedef struct {
+	int16_t x,y;
+} int16_tp;
+
+// Maximum map size: {16*8,4*8} 
+
+typedef struct {
+	
+	int16_tp pos;
+	uint8_tp size;
+	uint8_tp initPos;
+	uint8_t tiles[24][128];
+} TMap;
+
+typedef struct {
+	
+	uint8_t enabled;
+	uint16_t type;
+	int16_tp pos, speed, acc;
+	int8_t facing;
+	int8_t state;
+	int8_t step;
+	TRect16 hitbox;
+} TEntity;
+
+typedef struct {
+	
+	uint32_t frameN;
+	uint8_t jumpReleased;
+	
+	TMap map;
+	TEntity entities[32];
+} TLevelState;
+
+
+Sprite SA[N_SPRITES]; // Sprite Attribute
+uint8_t SG[256][8];
+uint8_t PN[TILE_HEIGHT][TILE_WIDTH]; // Pattern Name Table
+
+TMap map;
+
+// Memory Map M2
+// PG: 0x0000-0x17FF
+// PN0: 0x1800-0x1AFF
+// SA0: 0x1B00-0x1B7F
+// PN1: 0x1B00-0x1EFF
+// SA1: 0x1F00-0x1F7F
+// CT: 0x2000-0x37FF
+// SP: 0x3800-0x3FFF
+
+//SCREEN 2 (256*192 Graphics mode):
+//Character patterns              0000-17FF
+//Name table (char positions)     1800-1AFF
+//Sprite attribute table          1B00-1B7F
+//PixelByte colour table          2000-37FF
+//Sprite character patterns       3800-3FFF
+
+__sfr __at 0x98 VDP0;
+__sfr __at 0x99 VDP1;
+
+inline void NOP(void) { __asm nop __endasm; }
+inline void DI(void) { __asm di __endasm; }
+inline void EI(void) { __asm ei __endasm; }
+
+inline void vdpSetWriteAddress(uint8_t high) { 
+	
+//	DI();
+	VDP1 = 0;
+	NOP();
+	VDP1 = high+0b0100000;
+//	EI();
+}
+
+inline void fillCharAsm() {
+	__asm
+		add a, a
+		add a, a
+		and a, d
+		inc hl
+		add a, (HL)
+		add a, e
+		out (_VDP0),a		
+	__endasm;
+}
+		
+volatile uint8_t pv_;
+volatile uint8_t *p_;
+inline void fillLineAsm(uint8_t pv__, uint8_t *p__) {
+	
+
+}
+
+uint8_t lovelyLoopIndex;
+void fillFrameBufferAsm(uint16_t PGaddress, uint16_t x, uint16_t y) {
+	
+	
+	uint16_t displayMapPosY = y;
+	uint16_t displayMapPosX = x;
+	vdpSetWriteAddress(PGaddress);
+	{
+		uint16_t x2=(displayMapPosX+0x20)>>6;
+		pv_ = 0x80 + ((x2&3)<<4);
+		p_ = &map.tiles[19-y][(x2>>2)];
+		
+		lovelyLoopIndex = 20;
+
+	__asm 
+//		push bc
+//		push de
+//		push hl
+
+		ld a,#0x0F
+		ld d, a
+		ld a,(_pv_)
+		ld e, a
+		ld hl, (_p_)
+	__endasm;
+
+		//for (i=0; i<20; i++) {
+	__asm 
+//		push bc
+//		push de
+//		push hl
+
+lli1$:	ld a,(hl)
+		inc hl
+	__endasm;
+	
+
+	{
+		REPEAT32( fillCharAsm(); );
+	}
+
+	__asm
+		ld bc,#127
+		sbc hl,bc
+		ld	iy,#_lovelyLoopIndex
+		dec (iy)
+		jp NZ,lli1$
+//		pop hl
+//		pop de
+//		pop bc
+	__endasm;
+
+		//}	
+	}
+}
+
+
+inline void fillLine(uint8_t pv_, uint8_t *p_) {
+
+	register uint8_t pv = pv_;
+	register uint8_t *p = p_;
+	register uint8_t o = *p++;
+	REPEAT16(
+		VDP0 = o = (o<<2) + *p++ + pv;
+		VDP0 = o = (o<<2) + *p++ + pv;
+	)
+}
+
+
+void fillFrameBufferC(uint16_t PGaddress, uint16_t x, uint16_t y) {
+	
+	
+	uint16_t displayMapPosY = y;
+	uint16_t displayMapPosX = x;
+	//DI();
+	vdpSetWriteAddress(PGaddress);
+	{
+		uint16_t x2=(displayMapPosX+0x20)>>6;
+		uint8_t i,j;
+		//register uint8_t *pn=&PN[0][0];
+		uint8_t pv = 0x80 + ((x2&3)<<4);
+		for (i=0; i<20; i++) {
+			uint8_t *p = &map.tiles[19-i][(x2>>2)];
+			fillLine(pv,p);
+		}	
+	}
+	//EI();
+}
+
+
+
+
+
+
+
+void (*new_isr)(void);
+void install_isr() {
+	
+	__asm
+		push hl
+
+		di
+		
+		ld a,#0xE0
+		out (#0x99),a
+		ld a,#0x81
+		out (#0x99),a
+
+		ld hl,(_new_isr)
+		ld (#0x0039),hl
+		
+		in a,(#0x99)
+		
+		ei
+		
+		pop hl
+	__endasm;
+}
+
+void install_isr_rom() {
+	
+	__asm
+		push ix
+		ld ix,#0
+		add ix,sp
+
+		; Set new ISR vector
+		di
+		ld A,#0xC3
+		ld (#0xFD9F),A
+		ld hl,(_new_isr)
+		ld (#0xFD9F+1),hl
+		ei
+
+		pop ix
+	__endasm;
+}
+
+
+volatile uint8_t clk;
+
+void my_isr(void)  {
+
+	__asm in a,(#0x99) __endasm;
+	clk++;
+}
+
+void putdec(int16_t digits, uint16_t v) {
+	while (digits > 0) {
+		uint16_t aux = v / digits;
+		uint8_t n = aux % 10;
+		putchar('0' + n);
+		digits /= 10;
+	}
+}
+
+
+void putdec8(uint8_t v) {
+	putdec(100, v);
+}
+
+	
+void main(void) {
+    
+    puts("Hello, world :-)\r\n");
+    
+    new_isr = my_isr;
+    install_isr_rom();
+    
+
+    
+    puts("Building Map\r\n");
+    { clk = 0; }
+    {
+		uint8_t i,j;
+		for (i=0; i<map.size.y; i++) {
+			for (j=0; j<map.size.x; j++) {
+				switch (mapInfo[i*128+j]) {
+				case 'a':
+					map.tiles[23-i][j] = 2;
+					break;
+				default:
+					map.tiles[23-i][j] = 0;
+				}
+			}
+		}
+	}
+    //puts("\n");
+	{ uint8_t c = clk; putdec8(c); }
+    puts("\n");
+	puts("\nDone!\n");
+
+        
+    puts("Filling Framebuffer\r\n");
+    { clk = 0; }
+    {
+		uint16_t x;
+		for (x=0; x<100; x++) {
+			
+			fillFrameBufferAsm(0x38,x,0);
+//			putchar('a');
+		}
+	}
+    putchar('\n');
+	{ uint8_t c = clk; putdec8(c); }
+    puts("\n");
+	puts("\nDone!\n");
+   	while (1);
+}
