@@ -1,5 +1,13 @@
 #include <types.h>
 
+
+static uint8_t reverse8(uint8_t b) {
+   b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+   b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+   b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+   return b;
+}
+
 enum {
 BTransparent=0x0,
 BBlack,
@@ -93,6 +101,8 @@ T_f I0_init();
 T_f state_ptr;
 int8_t updateLoop() { state_ptr = (T_f)((*state_ptr)()); return 0;}
 
+
+enum { KEY_RIGHT, KEY_LEFT, KEY_DOWN, KEY_UP, KEY_SPACE };
 
 int8_t mainLoop() {
 	

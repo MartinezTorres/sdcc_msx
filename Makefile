@@ -1,6 +1,8 @@
 NAME := skel
 ADDR_CODE = 0x4020
+CODE_SIZE = 0x7FDF
 ADDR_DATA = 0xC000
+DATA_SIZE = 0x3000
 
 
 CCZ80 = sdcc
@@ -9,7 +11,7 @@ MSX1 = openmsx -machine C-BIOS_MSX1 -carta
 HEXBIN = makebin -s 65536
 
 #VERBOSE = -V
-CCZ80FLAGS += $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --data-loc $(ADDR_DATA) --no-std-crt0 --out-fmt-ihx --opt-code-size
+CCZ80FLAGS += $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size
 
 LINUX_HEADERS  = $(wildcard src/common/*.h) $(wildcard src/linux/*.h)
 MSX_HEADERS    = $(wildcard src/common/*.h) $(wildcard src/msx/*.h) 
@@ -31,8 +33,10 @@ tmp/%.rel: src/msx/%.s
 	@echo "Done!"
 
 tmp/%.ihx: $(MSX_OBJ_ASM) $(MSX_SRC_C) $(MSX_HEADERS)
-	@echo -n "Compiling $< -> $@ ... "
-	@mkdir -p tmp && cd tmp && $(CCZ80) -D MSX -I../src/common -I../src/msx $(CCZ80FLAGS) $(addprefix ../,$<) $(addprefix ../,$(MSX_SRC_C)) -o $(notdir $@) || true
+	@echo -n "Compiling -> $@ ... "
+	#@mkdir -p tmp && cd tmp && $(CCZ80) -D MSX -I../src/common -I../src/msx $(CCZ80FLAGS) $(addprefix ../,$<) $(addprefix ../,$(MSX_SRC_C)) -o $(notdir $@) || true
+	@mkdir -p tmp
+	$(CCZ80) -D MSX -Isrc/common -Isrc/msx $(CCZ80FLAGS) $(MSX_OBJ_ASM) $(MSX_SRC_C) -o $@
 	@echo "Done!"
 
 bin/%.rom: tmp/%.ihx
@@ -42,9 +46,9 @@ bin/%.rom: tmp/%.ihx
 	@echo "Done!"
 
 bin/%.pc:  $(LINUX_SRC_C) $(LINUX_HEADERS)
-	$(CC) -D PC -o $@ $(LINUX_SRC_C) -lSDL2 -Isrc/common -Isrc/linux -Wall -Wextra
+	$(CC) -D LINUX -o $@ $(LINUX_SRC_C) -lSDL2 -Isrc/common -Isrc/linux -Wall -Wextra
 
-run: bin/$(NAME)
+run: bin/$(NAME).pc
 	@./$<
 
 msx1: bin/$(NAME).rom

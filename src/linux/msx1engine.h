@@ -147,7 +147,20 @@ void closeSDL() {
 
 RGB framebuffer[TEX_HEIGHT][TEX_WIDTH];
 
-uint8_t keys[256];
+
+enum {
+#define  KEYBOARD_RIGHT  0x80
+#define  KEYBOARD_DOWN   0x40
+#define  KEYBOARD_UP     0x20
+#define  KEYBOARD_LEFT   0x10
+#define  KEYBOARD_DEL    0x08
+#define  KEYBOARD_INS    0x04
+#define  KEYBOARD_HOME   0x02
+#define  KEYBOARD_SPACE  0x01
+};
+
+
+uint8_t keyboard_read(void);
 
 
 typedef void (*T_void)(void);
@@ -156,6 +169,7 @@ T_f I0_init();
 T_f state_ptr;
 int8_t updateLoop() { state_ptr = (T_f)((*state_ptr)()); return 0;}
 
+enum { KEY_RIGHT=SDLK_RIGHT, KEY_LEFT=SDLK_LEFT, KEY_DOWN=SDLK_DOWN, KEY_UP=SDLK_UP, KEY_SPACE=' ' };
 
 int8_t mainLoop() {
 
