@@ -1,7 +1,9 @@
 #include <msx1engine.h>
+T_f start() { return (T_f)start; }
+
 #ifdef PC
+#include <msx1engine.h>
 	#include <unistd.h>
-#endif
 
 #define cropped(a,b,c) (a<(b)?(b):(a>(c)?(c):a))
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -544,3 +546,5 @@ T_f L1_levelEnd() {
 	//std::cout << "Goal reached!" << std::endl;
 	return (T_f)(M0_menu);
 }
+
+#endif

@@ -46,9 +46,9 @@ bin/%.rom: tmp/%.ihx
 	@echo "Done!"
 
 bin/%.pc:  $(LINUX_SRC_C) $(LINUX_HEADERS)
-	$(CC) -D LINUX -o $@ $(LINUX_SRC_C) -lSDL2 -Isrc/common -Isrc/linux -Wall -Wextra
+	$(CC) -g -D LINUX -o $@ $(LINUX_SRC_C) -lSDL2 -Isrc/common -Isrc/linux -Wall -Wextra
 
-run: bin/$(NAME).pc
+linux: bin/$(NAME).pc
 	@./$<
 
 msx1: bin/$(NAME).rom

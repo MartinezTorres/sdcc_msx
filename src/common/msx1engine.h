@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 enum {
 BTransparent=0x0,
 BBlack,
@@ -35,31 +37,39 @@ FGray=0xE0,
 FWhite=0xF0};
 
 
-typedef struct {
+// Memory Map M2
+// PG: 0x0000-0x17FF
+// PN0: 0x1800-0x1AFF
+// SA0: 0x1B00-0x1B7F
+// PN1: 0x1B00-0x1EFF
+// SA1: 0x1F00-0x1F7F
+// CT: 0x2000-0x37FF
+// SP: 0x3800-0x3FFF
+/*typedef struct {
 	enum { MODE0=0, MODE1=1, MODE2=2 } mode;
 	enum { SPRITE8X8=0, SPRITE16X16=1 } spriteSize;
 	uint8_t isBlank;
 	uint8_t generateInterrupts;
 	uint8_t magnifySprites;
-} TMS9918Settings;
+	uint8_t textcolor, backdrop;
+	
+	uint16_t PG;
+	uint16_t PN;
+	uint16_t SA;
+	uint16_t CT;
+	uint16_t SP;
+} TMS9918Settings;*/
 
-void setTMS9918_setSettings(TMS9918Settings &mode);
-void setTMS9918_setMode2Page0();
-void setTMS9918_setMode2Page1();
-
-
+//void setTMS9918_setRegister();
+void setTMS9918_activatePage0();
+void setTMS9918_activatePage1();
+void setTMS9918_write(uint16_t dst, uint8_t *src, uint8_t sz);
 
 enum { KEYBOARD_RIGHT=0x80,KEYBOARD_DOWN=0x40,KEYBOARD_UP=0x20,KEYBOARD_LEFT=0x10,KEYBOARD_DEL=0x08,KEYBOARD_INS=0x04,KEYBOARD_HOME=0x02,KEYBOARD_SPACE=0x01 } ;
 uint8_t keyboard_read(void);
 
-
 typedef void (*T_void)(void);
 typedef T_void (*T_f)(void);
-T_f init();
-T_f state_ptr;
-
-enum { KEY_RIGHT=SDLK_RIGHT, KEY_LEFT=SDLK_LEFT, KEY_DOWN=SDLK_DOWN, KEY_UP=SDLK_UP, KEY_SPACE=' ' };
-
-int8_t mainLoop();
+T_f start();
 
 
