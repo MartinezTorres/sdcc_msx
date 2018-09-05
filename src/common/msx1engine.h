@@ -65,6 +65,22 @@ void setTMS9918_activatePage0();
 void setTMS9918_activatePage1();
 void setTMS9918_write(uint16_t dst, uint8_t *src, uint8_t sz);
 
+typedef struct {
+	uint8_t x,y;
+	uint8_t pattern;
+	uint8_t color;
+} Sprite;
+
+#define N_SPRITES 32
+#define TILE_WIDTH 32
+#define TILE_HEIGHT 24
+typedef uint8_t T_PN[TILE_HEIGHT][TILE_WIDTH]; // Pattern Name Table
+typedef uint8_t T_CT[3][256][8]; // Pattern Color Table
+typedef uint8_t T_PG[3][256][8]; // Pattern Generator Table
+typedef Sprite  T_SA[N_SPRITES]; // Sprite Attribute Table
+typedef uint8_t T_SG[256][8];    // Sprite Generator Table
+
+
 enum { KEYBOARD_RIGHT=0x80,KEYBOARD_DOWN=0x40,KEYBOARD_UP=0x20,KEYBOARD_LEFT=0x10,KEYBOARD_DEL=0x08,KEYBOARD_INS=0x04,KEYBOARD_HOME=0x02,KEYBOARD_SPACE=0x01 } ;
 uint8_t keyboard_read(void);
 

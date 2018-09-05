@@ -14,9 +14,10 @@
 #define TEX_HEIGHT (TILE_HEIGHT*8)
 #define SCREEN_WIDTH (TEX_WIDTH*4)
 #define SCREEN_HEIGHT (TEX_HEIGHT*4)
-RGB framebuffer[TEX_HEIGHT][TEX_WIDTH];
 
 typedef struct { uint8_t r,g,b; } RGB;
+RGB framebuffer[TEX_HEIGHT][TEX_WIDTH];
+
 const RGB colors[16] = {
 {   0,    0,    0},
 {   0,    0,    0},
@@ -67,23 +68,18 @@ struct {
 	};
 } TMS9918Status;
 
-void drawMode2() {
-	
-	const uint8_t *PN = &TMS9918Status.ram[(uint16_t)(TMS9918Status.pn10)<<10];
-	const uint8_t *CT = &TMS9918Status.ram[(uint16_t)(TMS9918Status.ct6 )<< 6];
-	const uint8_t *PG = &TMS9918Status.ram[(uint16_t)(TMS9918Status.pg11)<<11];
-	const uint8_t *SA = &TMS9918Status.ram[(uint16_t)(TMS9918Status.sa7 )<< 7];
-	const uint8_t *SG = &TMS9918Status.ram[(uint16_t)(TMS9918Status.sg11)<<11];
 
+
+void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
+	
 	// TILES
 	for (int i=0; i<TILE_HEIGHT; i++) {
 		for (int j=0; j<TILE_WIDTH; j++) {
 			for (int ii=0; ii<8; ii++) {
-				uint8_t p = GT[i/8][PN[i][j]][ii];
+				uint8_t p = PG[i/8][PN[i][j]][ii];
 				uint8_t c = CT[i/8][PN[i][j]][ii];
 				RGB *pix = &framebuffer[i*8+ii][j*8];
 				for (int jj=0; jj<8; jj++) {
-					pix[jj] = colors[BD];
 					if (p&128) {
 						if (c>>4) {
 							pix[jj]=colors[c>>4];
@@ -125,6 +121,12 @@ void drawMode2() {
 
 void drawScreen() {
 
+	const T_PN *PN = (T_PN *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.pn10)<<10];
+	const T_CT *CT = (T_CT *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.ct6 )<< 6];
+	const T_PG *PG = (T_PG *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.pg11)<<11];
+	const T_SA *SA = (T_SA *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.sa7 )<< 7];
+	const T_SG *SG = (T_SG *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.sg11)<<11];
+
 
 	for (int i=0; i<TEX_HEIGHT; i++)
 		for (int j=0; j<TEX_WIDTH; j++)
@@ -132,7 +134,7 @@ void drawScreen() {
 			
 	if (TMS9918Status.blankscreen) return;
 
-	if (TMS9918Status.mode2) drawMode2(); //only mode2 is supported
+	if (TMS9918Status.mode2) drawMode2(*PN, *CT, *PG, *SA, *SG); //only mode2 is supported
 }
 
 // KEYBOARD
