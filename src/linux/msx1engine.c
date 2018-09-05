@@ -50,13 +50,13 @@ struct {
 				uint8_t reserved1 : 6;
 			};
 			struct {
-				uint8_t magnifysprites : 1;
+				uint8_t magnifySprites : 1;
 				uint8_t sprites16 : 1;
 				uint8_t reserved2: 1;
 				uint8_t mode3 : 1;
 				uint8_t mode1 : 1;
-				uint8_t generateinterrupts : 1;
-				uint8_t blankscreen : 1;
+				uint8_t generateInterrupts : 1;
+				uint8_t blankScreen : 1;
 				uint8_t mem416K : 1;
 			};
 			uint8_t pn10, ct6, pg11, sa7, sg11;
@@ -70,7 +70,7 @@ struct {
 
 
 
-void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
+static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
 	
 	// TILES
 	for (int i=0; i<TILE_HEIGHT; i++) {
@@ -119,7 +119,7 @@ void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const
 	}
 }
 
-void drawScreen() {
+static inline void drawScreen() {
 
 	const T_PN *PN = (T_PN *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.pn10)<<10];
 	const T_CT *CT = (T_CT *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.ct6 )<< 6];
@@ -132,10 +132,56 @@ void drawScreen() {
 		for (int j=0; j<TEX_WIDTH; j++)
 			framebuffer[i][j] = colors[TMS9918Status.backdrop];
 			
-	if (TMS9918Status.blankscreen) return;
+	if (TMS9918Status.blankScreen) return;
 
 	if (TMS9918Status.mode2) drawMode2(*PN, *CT, *PG, *SA, *SG); //only mode2 is supported
 }
+
+
+// Memory Map M2
+// PG: 0x0000-0x17FF
+// PN0: 0x1800-0x1AFF
+// SA0: 0x1F00-0x1B7F
+// PN1: 0x1B00-0x1EFF
+// SA1: 0x1F10-0x1FFF
+// CT: 0x2000-0x37FF
+// SG: 0x3800-0x3FFF
+
+void setTMS9918_setMode2() {
+	
+	memset(&TMS9918Status,0,sizeof(TMS9918Status));
+	TMS9918Status.mode2 = 1;
+	TMS9918Status.generateInterrupts = 1;
+	TMS9918Status.mem416K = 1;
+	
+	TMS9918Status.pn10 =  ADDRESS_PN0 >> 10;
+	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
+	TMS9918Status.pg11 = (ADDRESS_PG  >> 11) | 0b00000011;
+	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
+	TMS9918Status.sg11 =  ADDRESS_SG >> 11;
+}
+
+void setTMS9918_activatePage0() {
+
+	TMS9918Status.pn10 = ADDRESS_PN0 >> 10;
+	TMS9918Status.sa7  = ADDRESS_SA0 >>  7;
+}
+void setTMS9918_activatePage1() {
+	
+	TMS9918Status.pn10 = ADDRESS_PN1 >> 10;
+	TMS9918Status.sa7  = ADDRESS_SA1 >>  7;
+}
+
+void setTMS9918_setRegister(uint8_t reg, uint8_t val) {
+	
+	TMS9918Status.reg[reg] = val;
+}
+
+void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz) {
+	
+	memcpy(&TMS9918Status.ram[dst], src, sz);
+}
+
 
 // KEYBOARD
 uint8_t keyboardStatus;
@@ -229,11 +275,11 @@ static inline void closeSDL() {
 
 int main() {
 	
-	memset(&TMS9918Status,0,sizeof(TMS9918Status));
-	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);		
-	TMS9918Status.mode2 = 1;
-	TMS9918Status.backdrop = 0xA;
-	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);
+	
+//	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);		
+//	TMS9918Status.mode2 = 1;
+//	TMS9918Status.backdrop = 0xA;
+//	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);
 	
 	
 	T_f	state_ptr = (T_f)(start);

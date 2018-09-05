@@ -45,25 +45,14 @@ FWhite=0xF0};
 // SA1: 0x1F00-0x1F7F
 // CT: 0x2000-0x37FF
 // SP: 0x3800-0x3FFF
-/*typedef struct {
-	enum { MODE0=0, MODE1=1, MODE2=2 } mode;
-	enum { SPRITE8X8=0, SPRITE16X16=1 } spriteSize;
-	uint8_t isBlank;
-	uint8_t generateInterrupts;
-	uint8_t magnifySprites;
-	uint8_t textcolor, backdrop;
-	
-	uint16_t PG;
-	uint16_t PN;
-	uint16_t SA;
-	uint16_t CT;
-	uint16_t SP;
-} TMS9918Settings;*/
 
-//void setTMS9918_setRegister();
-void setTMS9918_activatePage0();
-void setTMS9918_activatePage1();
-void setTMS9918_write(uint16_t dst, uint8_t *src, uint8_t sz);
+#define ADDRESS_PN0 0x1800
+#define ADDRESS_PN1 0x1B00
+#define ADDRESS_CT  0x2000
+#define ADDRESS_PG  0x0000
+#define ADDRESS_SA0 0x1F00
+#define ADDRESS_SA1 0x1F80
+#define ADDRESS_SG  0x3800
 
 typedef struct {
 	uint8_t x,y;
@@ -79,6 +68,13 @@ typedef uint8_t T_CT[3][256][8]; // Pattern Color Table
 typedef uint8_t T_PG[3][256][8]; // Pattern Generator Table
 typedef Sprite  T_SA[N_SPRITES]; // Sprite Attribute Table
 typedef uint8_t T_SG[256][8];    // Sprite Generator Table
+
+void setTMS9918_setMode2(); // Configured for a single 256 character table.
+void setTMS9918_activatePage0();
+void setTMS9918_activatePage1();
+
+void setTMS9918_setRegister(uint8_t reg, uint8_t val);
+void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz);
 
 
 enum { KEYBOARD_RIGHT=0x80,KEYBOARD_DOWN=0x40,KEYBOARD_UP=0x20,KEYBOARD_LEFT=0x10,KEYBOARD_DEL=0x08,KEYBOARD_INS=0x04,KEYBOARD_HOME=0x02,KEYBOARD_SPACE=0x01 } ;

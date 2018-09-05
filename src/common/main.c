@@ -1,9 +1,6 @@
 #include <msx1engine.h>
-T_f start() { return (T_f)start; }
-
-#ifdef PC
-#include <msx1engine.h>
-	#include <unistd.h>
+#include <util.h>
+//T_f start() { return (T_f)start; }
 
 #define cropped(a,b,c) (a<(b)?(b):(a>(c)?(c):a))
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -207,9 +204,10 @@ enum { ST_RESTING, ST_JUMP0, ST_JUMP1, ST_JUMP2 };
 enum { LEFT=0x1, RIGHT=0x2, TOP=0x4, BOTTOM=0x8};
 
 
-T_f I0_init() {
-
+T_f start() {
+	
 	{
+		T_SG SG;
 		uint8_t i,j;
 		for (j=0; j<127; j++)
 			for (i=0; i<8; i++)
@@ -218,20 +216,24 @@ T_f I0_init() {
 		for (j=0; j<127; j++)
 			for (i=0; i<8; i++)
 				SG[j+128][i] = reverse8(mySG[j][i]);
+				
+		setTMS9918_write(ADDRESS_SG,&SG[0][0],sizeof(SG));
 	}
 
 	{
+		T_PG PG;
+		T_CT CT;
 		uint8_t nt, h, cl, cr, l;
 		for (nt=0; nt<3; nt++) {
 			for (h=0; h<4; h++) {
 				for (cl=0; cl<4; cl++) {
 					for (cr=0; cr<4; cr++) {
 						for (l=0; l<8; l++) {
-							GT[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
+							PG[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								(myBG0[cl][l][0]<<(h*2)) + (myBG0[cr][l][0]>>(8-h*2));
 							CT[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								max(myBG0[cl][l][1], myBG0[cr][l][1]);
-							GT[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
+							PG[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								(myBG1[cl][l][0]<<(h*2)) + (myBG1[cr][l][0]>>(8-h*2));
 							CT[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								max(myBG1[cl][l][1], myBG1[cr][l][1]);
@@ -240,6 +242,9 @@ T_f I0_init() {
 				}
 			}
 		}
+
+		setTMS9918_write(ADDRESS_PG,&PG[0][0][0],sizeof(PG));		
+		setTMS9918_write(ADDRESS_CT,&CT[0][0][0],sizeof(CT));		
 	}
 
 	return (T_f)(M0_menu);
@@ -331,11 +336,19 @@ T_f L0_levelInit() {
 		}
 	}
 
+	
+	setTMS9918_setMode2();
+	setTMS9918_activatePage0();
+
 	return (T_f)(L1_levelMain);
 }
 
 int nFrame;
 int nSkipped;
+
+		
+T_SA SA;
+T_PN PN;
 
 T_f L1_levelMain() {
 
@@ -348,29 +361,29 @@ T_f L1_levelMain() {
 	TMap *map = &levelState.map;	
 	TEntity *player = &levelState.entities[0];
 	if (player->enabled) {
+		
+		uint8_t keys = keyboard_read();
 
 		if (player->speed.x>=0) player->acc.x = max(-player->speed.x,-0x2);
 		if (player->speed.x<=0) player->acc.x = min(-player->speed.x, 0x2);
 		
-		if (keys[KEY_RIGHT%256]) {
+		
+		
+		if (keys & KEYBOARD_RIGHT) {
 //			if (player->facing>=0)
 				player->acc.x=0x4;
 //			else
 //				player->acc.x=0x2;
 		}
 
-		if (keys[KEY_LEFT%256]) {
+		if (keys & KEYBOARD_LEFT) {
 //			if (player->facing<=0)
 				player->acc.x=-0x4;
 //			else
 //				player->acc.x=-0x2;
 		}
 
-		if (keys[KEY_DOWN%256]) {}
-
-		if (keys[KEY_UP%256]) {}
-
-		if (keys[KEY_SPACE%256]) {
+		if (keys & KEYBOARD_SPACE) {
 			if (player->state<ST_JUMP0 && levelState.jumpReleased) {
 				player->speed.y = 0x74;
 				player->state++;
@@ -493,7 +506,7 @@ T_f L1_levelMain() {
 	}
 
 #ifdef LINUX	
-	{
+	{		
 		int displayMapPosX = ((map->pos.x+0x20)>>6)<<6;
 		
 		int spritePosX = (player->pos.x+0x10-displayMapPosX)>>5;
@@ -529,6 +542,9 @@ T_f L1_levelMain() {
 				}
 			}	
 		}
+		
+		setTMS9918_write(ADDRESS_PN0,&PN[0][0],sizeof(PN));		
+		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
 	}
 #endif
 	
@@ -546,5 +562,3 @@ T_f L1_levelEnd() {
 	//std::cout << "Goal reached!" << std::endl;
 	return (T_f)(M0_menu);
 }
-
-#endif
