@@ -5,8 +5,18 @@
 #include <SDL2/SDL.h>
 #include "font8x8_basic.h"
 
-typedef struct { uint8_t r,g,b; } RGB;
 
+// VDP EMULATOR
+#define N_SPRITES 32
+#define TILE_WIDTH 32
+#define TILE_HEIGHT 24
+#define TEX_WIDTH (TILE_WIDTH*8)
+#define TEX_HEIGHT (TILE_HEIGHT*8)
+#define SCREEN_WIDTH (TEX_WIDTH*4)
+#define SCREEN_HEIGHT (TEX_HEIGHT*4)
+RGB framebuffer[TEX_HEIGHT][TEX_WIDTH];
+
+typedef struct { uint8_t r,g,b; } RGB;
 const RGB colors[16] = {
 {   0,    0,    0},
 {   0,    0,    0},
@@ -35,27 +45,95 @@ struct {
 		struct {
 			struct {
 				uint8_t extvid : 1;		
-				uint8_t m2 : 1;
+				uint8_t mode2 : 1;
 				uint8_t reserved1 : 6;
 			};
 			struct {
-				uint8_t mag : 1;
-				uint8_t si : 1;
+				uint8_t magnifysprites : 1;
+				uint8_t sprites16 : 1;
 				uint8_t reserved2: 1;
-				uint8_t m3 : 1;
-				uint8_t m1 : 1;
-				uint8_t gint : 1;
-				uint8_t bl : 1;
+				uint8_t mode3 : 1;
+				uint8_t mode1 : 1;
+				uint8_t generateinterrupts : 1;
+				uint8_t blankscreen : 1;
 				uint8_t mem416K : 1;
 			};
 			uint8_t pn10, ct6, pg11, sa7, sg11;
 			struct {
-				uint8_t bd : 4;
-				uint8_t tc : 4;
+				uint8_t backdrop : 4;
+				uint8_t textcolor : 4;
 			};
 		};
 	};
 } TMS9918Status;
+
+void drawMode2() {
+	
+	const uint8_t *PN = &TMS9918Status.ram[(uint16_t)(TMS9918Status.pn10)<<10];
+	const uint8_t *CT = &TMS9918Status.ram[(uint16_t)(TMS9918Status.ct6 )<< 6];
+	const uint8_t *PG = &TMS9918Status.ram[(uint16_t)(TMS9918Status.pg11)<<11];
+	const uint8_t *SA = &TMS9918Status.ram[(uint16_t)(TMS9918Status.sa7 )<< 7];
+	const uint8_t *SG = &TMS9918Status.ram[(uint16_t)(TMS9918Status.sg11)<<11];
+
+	// TILES
+	for (int i=0; i<TILE_HEIGHT; i++) {
+		for (int j=0; j<TILE_WIDTH; j++) {
+			for (int ii=0; ii<8; ii++) {
+				uint8_t p = GT[i/8][PN[i][j]][ii];
+				uint8_t c = CT[i/8][PN[i][j]][ii];
+				RGB *pix = &framebuffer[i*8+ii][j*8];
+				for (int jj=0; jj<8; jj++) {
+					pix[jj] = colors[BD];
+					if (p&128) {
+						if (c>>4) {
+							pix[jj]=colors[c>>4];
+						}
+					} else {
+						if (c & 0xF) {
+							pix[jj]=colors[c&0xF];
+						}
+					}
+					p*=2;
+				}
+			}
+		}
+	}
+	
+	// SPRITES
+	for (int i=0; i<TILE_HEIGHT*8; i++) {
+		int nShownSprites=0;
+		for (int j=0; j<N_SPRITES && SA[j].y!=208 && nShownSprites<4; j++) {
+			uint8_t spriteLine = i-SA[j].y-1;
+			if (spriteLine>7) continue;
+			nShownSprites++;
+			
+			uint8_t p = SG[SA[j].pattern][spriteLine];
+			for (int jj=0; jj<8; jj++) {
+				int xCoord = SA[j].x - (32*!!(SA[j].color&128)) + jj;
+				if (xCoord<0 || xCoord>=TILE_WIDTH*8) continue;
+				RGB *pix = &framebuffer[i][xCoord];
+				if (p&128) {
+					if (SA[j].color&0xF) {
+						*pix=colors[SA[j].color&0xF];
+					}
+				}
+				p*=2;
+			}
+		}
+	}
+}
+
+void drawScreen() {
+
+
+	for (int i=0; i<TEX_HEIGHT; i++)
+		for (int j=0; j<TEX_WIDTH; j++)
+			framebuffer[i][j] = colors[TMS9918Status.backdrop];
+			
+	if (TMS9918Status.blankscreen) return;
+
+	if (TMS9918Status.mode2) drawMode2(); //only mode2 is supported
+}
 
 // KEYBOARD
 uint8_t keyboardStatus;
@@ -78,20 +156,10 @@ static inline void keyboard_init(void) {
 uint8_t keyboard_read(void) { return keyboardStatus; }
 
 
-// SDL GRAPHICAL BACKEND
-
-#define N_SPRITES 32
-#define TILE_WIDTH 32
-#define TILE_HEIGHT 24
-#define TEX_WIDTH (TILE_WIDTH*8)
-#define TEX_HEIGHT (TILE_HEIGHT*8)
-#define SCREEN_WIDTH (TEX_WIDTH*4)
-#define SCREEN_HEIGHT (TEX_HEIGHT*4)
-
+// SDL BACKEND
 SDL_Window* gWindow = NULL;
 SDL_Renderer* gRenderer = NULL;
 SDL_Texture* tex = NULL;
-RGB framebuffer[TEX_HEIGHT][TEX_WIDTH];
 
 static inline int8_t initSDL() {
 	    
@@ -121,7 +189,7 @@ static inline int8_t initSDL() {
     return 0;
 }
 
-static inline int8_t drawFramebufferSDL() {
+static inline int8_t displayFramebufferSDL() {
 	
 	
 		// clear screen
@@ -161,8 +229,8 @@ int main() {
 	
 	memset(&TMS9918Status,0,sizeof(TMS9918Status));
 	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);		
-	TMS9918Status.m2 = 1;
-	TMS9918Status.bd = 0xA;
+	TMS9918Status.mode2 = 1;
+	TMS9918Status.backdrop = 0xA;
 	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);
 	
 	
@@ -200,58 +268,8 @@ int main() {
                     break;
 			}
 		}
-
-	
-		/*{
-			// TILES
-			for (int i=0; i<TILE_HEIGHT; i++) {
-				for (int j=0; j<TILE_WIDTH; j++) {
-					for (int ii=0; ii<8; ii++) {
-						uint8_t p = GT[i/8][PN[i][j]][ii];
-						uint8_t c = CT[i/8][PN[i][j]][ii];
-						RGB *pix = &framebuffer[i*8+ii][j*8];
-						for (int jj=0; jj<8; jj++) {
-							pix[jj] = colors[BD];
-							if (p&128) {
-								if (c>>4) {
-									pix[jj]=colors[c>>4];
-								}
-							} else {
-								if (c & 0xF) {
-									pix[jj]=colors[c&0xF];
-								}
-							}
-							p*=2;
-						}
-					}
-				}
-			}
-			
-			// SPRITES
-			for (int i=0; i<TILE_HEIGHT*8; i++) {
-				int nShownSprites=0;
-				for (int j=0; j<N_SPRITES && SA[j].y!=208 && nShownSprites<4; j++) {
-					uint8_t spriteLine = i-SA[j].y-1;
-					if (spriteLine>7) continue;
-					nShownSprites++;
-					
-					uint8_t p = SG[SA[j].pattern][spriteLine];
-					for (int jj=0; jj<8; jj++) {
-						int xCoord = SA[j].x - (32*!!(SA[j].color&128)) + jj;
-						if (xCoord<0 || xCoord>=TILE_WIDTH*8) continue;
-						RGB *pix = &framebuffer[i][xCoord];
-						if (p&128) {
-							if (SA[j].color&0xF) {
-								*pix=colors[SA[j].color&0xF];
-							}
-						}
-						p*=2;
-					}
-				}
-			}
-		}	*/	
 		
-		drawFramebufferSDL();
+		displayFramebufferSDL();
 		
 		uint32_t delay = SDL_GetTicks()-ticksStart;
 		if (delay>(1000/60-1)) delay = (1000/60-1);
