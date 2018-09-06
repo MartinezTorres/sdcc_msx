@@ -1,4 +1,4 @@
-#include <msx1engine.h>
+#include <msx1hal.h>
 #include <util.h>
 //T_f start() { return (T_f)start; }
 
@@ -205,6 +205,10 @@ enum { LEFT=0x1, RIGHT=0x2, TOP=0x4, BOTTOM=0x8};
 
 
 T_f start() {
+
+	setTMS9918_setMode2();
+	setTMS9918_activatePage0();
+
 	
 	{
 		T_SG SG;
@@ -283,7 +287,6 @@ const char mapInfo[] =
 
 T_f L0_levelInit() {
 	
-	
 	TEntity *player = &levelState.entities[0];
 	
 	levelState.map.size.x=128;
@@ -336,10 +339,6 @@ T_f L0_levelInit() {
 		}
 	}
 
-	
-	setTMS9918_setMode2();
-	setTMS9918_activatePage0();
-
 	return (T_f)(L1_levelMain);
 }
 
@@ -352,6 +351,7 @@ T_PN PN;
 
 T_f L1_levelMain() {
 
+//	printf("levelMain\n");
 
 	uint8_t x0,x1,y0,y1;
 	uint8_t x0r,x1r,y0r,y1r;
@@ -505,7 +505,6 @@ T_f L1_levelMain() {
 		
 	}
 
-#ifdef LINUX	
 	{		
 		int displayMapPosX = ((map->pos.x+0x20)>>6)<<6;
 		
@@ -546,7 +545,6 @@ T_f L1_levelMain() {
 		setTMS9918_write(ADDRESS_PN0,&PN[0][0],sizeof(PN));		
 		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
 	}
-#endif
 	
 	return (T_f)(L1_levelMain);
 }
