@@ -113,6 +113,24 @@ void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz) {
 inline static void keyboard_placeholder(void) {
 	
 	__asm
+	_keyboard_read_old::
+		push ix
+		ld ix,#0
+		add ix,sp
+
+		in a,(#0xAA)
+		and #0xF0       ; only change bits 0-3
+		or #8           ; row 8
+		out (#0xAA),a
+		in a,(#0xA9)    ; read row into A
+		xor #0xFF
+		ld l,a
+
+		pop ix
+		ret
+	__endasm;
+
+	__asm
 	_keyboard_read::
 		push ix
 		ld ix,#0

@@ -54,6 +54,12 @@ FWhite=0xF0};
 #define ADDRESS_SA1 0x1F80
 #define ADDRESS_SG  0x3800
 
+#define REPEAT2(a)  { {a}; {a}; }
+#define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
+#define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
+#define REPEAT16(a) { REPEAT8(a);  REPEAT8(a);  }
+#define REPEAT32(a) { REPEAT16(a); REPEAT16(a); }
+
 typedef struct {
 	uint8_t y,x;
 	uint8_t pattern;

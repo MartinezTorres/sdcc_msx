@@ -75,41 +75,41 @@ static const uint8_t mySG[][8] = {
 
 static const uint8_t myBG0[4][8][2] = {
 
-	{ 	{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b01000100, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00010001, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen } },
+	{ 	{ 0b00000000, BTransparent + FGray },
+		{ 0b00000000, BTransparent + FGray },
+		{ 0b01000100, BTransparent + FGray },
+		{ 0b00000000, BTransparent + FGray },
+		{ 0b00000000, BTransparent + FGray },
+		{ 0b00000000, BTransparent + FGray },
+		{ 0b00010001, BTransparent + FGray },
+		{ 0b00000000, BTransparent + FGray } },
 
-	{ 	{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00100000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen },
-		{ 0b00000100, BBlack + FDarkGreen },
-		{ 0b00010000, BBlack + FDarkGreen },
-		{ 0b00000000, BBlack + FDarkGreen } },
+	{ 	{ 0b11000011, BTransparent + FDarkGreen },
+		{ 0b11000011, BTransparent + FDarkGreen },
+		{ 0b11111111, BTransparent + FDarkGreen },
+		{ 0b11000011, BTransparent + FDarkGreen },
+		{ 0b11000011, BTransparent + FDarkGreen },
+		{ 0b11000011, BTransparent + FDarkGreen },
+		{ 0b11111111, BTransparent + FDarkGreen },
+		{ 0b11000011, BTransparent + FDarkGreen } },
 
-	{ 	{ 0b01111110, BBlack + FDarkGreen },
-		{ 0b11111111, BBlack + FDarkGreen },
-		{ 0b11000011, BBlack + FDarkGreen },
-		{ 0b11011011, BBlack + FDarkGreen },
-		{ 0b11011011, BBlack + FDarkGreen },
-		{ 0b11000011, BBlack + FDarkGreen },
-		{ 0b11111111, BBlack + FDarkGreen },
-		{ 0b01111110, BBlack + FDarkGreen } },
+	{ 	{ 0b01111110, BTransparent + FDarkBlue },
+		{ 0b11111111, BTransparent + FDarkBlue },
+		{ 0b11000011, BTransparent + FLightBlue },
+		{ 0b11011011, BTransparent + FDarkBlue },
+		{ 0b11011011, BTransparent + FLightBlue },
+		{ 0b11000011, BTransparent + FDarkBlue },
+		{ 0b11111111, BTransparent + FLightBlue },
+		{ 0b01111110, BTransparent + FLightBlue } },
 
-	{ 	{ 0b01111110, BBlack + FDarkGreen },
-		{ 0b10100101, BBlack + FDarkGreen },
-		{ 0b11011011, BBlack + FDarkGreen },
-		{ 0b10100101, BBlack + FDarkGreen },
-		{ 0b11011011, BBlack + FDarkGreen },
-		{ 0b10100101, BBlack + FDarkGreen },
-		{ 0b11011011, BBlack + FDarkGreen },
-		{ 0b01111110, BBlack + FDarkGreen } },
+	{ 	{ 0b01111110, BTransparent + FDarkRed },
+		{ 0b10100101, BTransparent + FDarkRed },
+		{ 0b11011011, BTransparent + FMediumRed },
+		{ 0b10100101, BTransparent + FDarkRed },
+		{ 0b11011011, BTransparent + FMediumRed },
+		{ 0b10100101, BTransparent + FDarkRed },
+		{ 0b11011011, BTransparent + FMediumRed },
+		{ 0b01111110, BTransparent + FMediumRed } },
 };
 
 
@@ -205,6 +205,8 @@ enum { LEFT=0x1, RIGHT=0x2, TOP=0x4, BOTTOM=0x8};
 T_f start() {
 
 	setTMS9918_setMode2();
+	setTMS9918_setRegister(7,BBlack+FWhite);
+	
 	setTMS9918_activatePage0();
 
 	{
@@ -218,7 +220,7 @@ T_f start() {
 			for (i=0; i<8; i++)
 				SG[j+128][i] = reverse8(mySG[j][i]);
 				
-		setTMS9918_write(ADDRESS_SG,(uint8_t *)SG,sizeof(T_SG));
+		setTMS9918_write(ADDRESS_SG,&SG[0][0],sizeof(T_SG));
 	}
 
 	{
@@ -231,13 +233,13 @@ T_f start() {
 					for (cr=0; cr<4; cr++) {
 						for (l=0; l<8; l++) {
 							PG[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								(myBG0[cl][l][0]<<(h*(cl<2?1:2))) | (myBG0[cr][l][0]>>(8-h*(cr<2?1:2)));
+								(myBG0[cl][l][0]<<(h*(cl?2:1))) | (myBG0[cr][l][0]>>(8-h*(cr?2:1)));
 							CT[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								max(myBG0[cl][l][1], myBG0[cr][l][1]);
+								h?min(myBG0[cl][l][1], myBG0[cr][l][1]):myBG0[cl][l][1];
 							PG[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								(myBG1[cl][l][0]<<(h*(cl<2?1:2))) | (myBG1[cr][l][0]>>(8-h*(cr<2?1:2)));
-							CT[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								max(myBG1[cl][l][1], myBG1[cr][l][1]);
+								(myBG1[cl][l][0]<<(h*(cl?2:1))) | (myBG1[cr][l][0]>>(8-h*(cr?2:1)));
+							CT[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] =
+								h?min(myBG1[cl][l][1], myBG1[cr][l][1]):myBG1[cl][l][1];
 						}
 					}
 				}
@@ -258,15 +260,15 @@ T_f M0_menu() {
 
 const char mapInfo[] = 
 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-"a                                                                                                                              a"
-"a                                                                                                                              a"
-"a                                                                                                                              a"
-"                                                                                                                               a"
-"                     aaaaaaa                                                                                                   a"
-"                                                                                                                               a"
-"a                                                                                                                              a"
-"a                                                                                                                              a"
-"a                     aaaaaa                                                                                                   a"
+"a       #                                                                                                                      a"
+"a       #                                                                                                                      a"
+"a       #                                                                                                                      a"
+"b       #                                                                                                                      a"
+"b       #            aaaaaaa                                                                                                   a"
+"b       #                                                                                                                      a"
+"a       #                                                                                                                      a"
+"a       #                                                                                                                      a"
+"a       #             aaaaaa                                                                                                   a"
 "a   aaaaa a                                                                                                                    a"
 "a                                                                                                                              a"
 "a                                                                                                                              a"
@@ -280,7 +282,7 @@ const char mapInfo[] =
 "a    aaaaa                a    a          a                                                                                    a"
 "a                                        aa      aaaa                                                                          a"
 "a                                 aaaa                                                                                         a"
-"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 T_f L0_levelInit() {
 	
@@ -329,6 +331,12 @@ T_f L0_levelInit() {
 				case 'a':
 					levelState.map.tiles[23-i][j] = 2;
 					break;
+				case 'b':
+					levelState.map.tiles[23-i][j] = 3;
+					break;
+				case '#':
+					levelState.map.tiles[23-i][j] = 1;
+					break;
 				default:
 					levelState.map.tiles[23-i][j] = 0;
 				}
@@ -341,6 +349,100 @@ T_f L0_levelInit() {
 
 int nFrame;
 int nSkipped;
+
+#ifdef MSX
+
+
+__sfr __at 0x98 VDP0;
+__sfr __at 0x99 VDP1;
+
+
+inline void NOP(void) { __asm nop __endasm; }
+inline void DI(void) { __asm di __endasm; }
+inline void EI(void) { __asm ei __endasm; }
+
+
+inline void vdpSetWriteAddress(uint8_t high) { 
+	
+//	DI();
+	VDP1 = 0;
+	NOP();
+	VDP1 = high+0b0100000;
+//	EI();
+}
+
+inline void fillCharAsm() {
+	__asm
+		add a, a
+		add a, a
+		and a, d
+		inc hl
+		add a, (HL)
+		add a, e
+		out (_VDP0),a		
+	__endasm;
+}
+		
+		
+volatile uint8_t pv_;
+volatile uint8_t *p_;
+
+uint8_t lovelyLoopIndex;
+void fillFrameBufferAsm(TMap *map, uint16_t PGaddress, uint16_t x, uint16_t y) {
+	
+	
+	uint16_t displayMapPosY = y;
+	uint16_t displayMapPosX = x;
+	vdpSetWriteAddress(PGaddress);
+	{
+		uint16_t x2=(displayMapPosX+0x20)>>6;
+		pv_ = 0x80 + ((x2&3)<<4);
+		p_ = &map->tiles[19-y][(x2>>2)];
+		
+		lovelyLoopIndex = 20;
+
+	__asm 
+//		push bc
+//		push de
+//		push hl
+
+		ld a,#0x0F
+		ld d, a
+		ld a,(_pv_)
+		ld e, a
+		ld hl, (_p_)
+	__endasm;
+
+		//for (i=0; i<20; i++) {
+	__asm 
+//		push bc
+//		push de
+//		push hl
+
+lli1$:	ld a,(hl)
+	__endasm;
+	
+
+	{
+		REPEAT32( fillCharAsm(); );
+	}
+
+	__asm
+		ld bc,#128+#32
+		or a
+		sbc hl,bc
+		ld	iy,#_lovelyLoopIndex
+		dec (iy)
+		jp NZ,lli1$
+//		pop hl
+//		pop de
+//		pop bc
+	__endasm;
+
+		//}	
+	}
+}
+#endif
 
 		
 T_SA SA;
@@ -524,9 +626,11 @@ T_f L1_levelMain() {
 
 
 		nFrame++;
-		if (player->acc.x>0) SA[0].pattern = 0x02+((nFrame/3)%2);
-		if (player->acc.x<0) SA[0].pattern = 0x82+((nFrame/3)%2);
+		if (player->acc.x>0) SA[0].pattern = 0x02+((nFrame>>2)&0x1);
+		if (player->acc.x<0) SA[0].pattern = 0x82+((nFrame>>2)&0x1);
 		
+
+		#ifdef LINUX
 		{
 			uint8_t i,j;
 			uint8_t x2=(displayMapPosX+0x20)>>6;
@@ -540,6 +644,14 @@ T_f L1_levelMain() {
 			}	
 		}
 		setTMS9918_write(ADDRESS_PN0,&PN[0][0],sizeof(PN));		
+		#endif
+		
+		#ifdef MSX
+		
+			fillFrameBufferAsm(map,0x38,displayMapPosX,displayMapPosY);
+		
+		#endif
+		
 		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
 	}
 	
