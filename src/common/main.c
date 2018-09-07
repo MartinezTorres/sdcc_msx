@@ -76,41 +76,41 @@ uint8_t mySG[][8] = {
 
 uint8_t myBG0[4][8][2] = {
 
-	{ 	{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue } },
+	{ 	{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b01000100, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00010001, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen } },
 
-	{ 	{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00100000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue },
-		{ 0b00000100, BBlack + FDarkBlue },
-		{ 0b00010000, BBlack + FDarkBlue },
-		{ 0b00000000, BBlack + FDarkBlue } },
+	{ 	{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00100000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen },
+		{ 0b00000100, BBlack + FDarkGreen },
+		{ 0b00010000, BBlack + FDarkGreen },
+		{ 0b00000000, BBlack + FDarkGreen } },
 
-	{ 	{ 0b01111110, BBlack + FDarkBlue },
-		{ 0b10100101, BBlack + FDarkBlue },
-		{ 0b11011011, BBlack + FDarkBlue },
-		{ 0b10100101, BBlack + FDarkBlue },
-		{ 0b11011011, BBlack + FDarkBlue },
-		{ 0b10100101, BBlack + FDarkBlue },
-		{ 0b11011011, BBlack + FDarkBlue },
-		{ 0b01111110, BBlack + FDarkBlue } },
+	{ 	{ 0b01111110, BBlack + FDarkGreen },
+		{ 0b11111111, BBlack + FDarkGreen },
+		{ 0b11000011, BBlack + FDarkGreen },
+		{ 0b11011011, BBlack + FDarkGreen },
+		{ 0b11011011, BBlack + FDarkGreen },
+		{ 0b11000011, BBlack + FDarkGreen },
+		{ 0b11111111, BBlack + FDarkGreen },
+		{ 0b01111110, BBlack + FDarkGreen } },
 
-	{ 	{ 0b01111110, BBlack + FDarkBlue },
-		{ 0b10100101, BBlack + FDarkBlue },
-		{ 0b11011011, BBlack + FDarkBlue },
-		{ 0b10100101, BBlack + FDarkBlue },
-		{ 0b11011011, BBlack + FDarkBlue },
-		{ 0b10100101, BBlack + FDarkBlue },
-		{ 0b11011011, BBlack + FDarkBlue },
-		{ 0b01111110, BBlack + FDarkBlue } },
+	{ 	{ 0b01111110, BBlack + FDarkGreen },
+		{ 0b10100101, BBlack + FDarkGreen },
+		{ 0b11011011, BBlack + FDarkGreen },
+		{ 0b10100101, BBlack + FDarkGreen },
+		{ 0b11011011, BBlack + FDarkGreen },
+		{ 0b10100101, BBlack + FDarkGreen },
+		{ 0b11011011, BBlack + FDarkGreen },
+		{ 0b01111110, BBlack + FDarkGreen } },
 };
 
 
@@ -234,11 +234,11 @@ T_f start() {
 					for (cr=0; cr<4; cr++) {
 						for (l=0; l<8; l++) {
 							PG[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								(myBG0[cl][l][0]<<(h*2)) + (myBG0[cr][l][0]>>(8-h*2));
+								(myBG0[cl][l][0]<<(h*(cl<2?1:2))) | (myBG0[cr][l][0]>>(8-h*(cr<2?1:2)));
 							CT[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								max(myBG0[cl][l][1], myBG0[cr][l][1]);
 							PG[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								(myBG1[cl][l][0]<<(h*2)) + (myBG1[cr][l][0]>>(8-h*2));
+								(myBG1[cl][l][0]<<(h*(cl<2?1:2))) | (myBG1[cr][l][0]>>(8-h*(cr<2?1:2)));
 							CT[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								max(myBG1[cl][l][1], myBG1[cr][l][1]);
 						}
@@ -506,9 +506,10 @@ T_f L1_levelMain() {
 	}
 
 	{		
-		int displayMapPosX = ((map->pos.x+0x20)>>6)<<6;
+		uint16_t displayMapPosX = ((map->pos.x+0x20)>>6)<<6;
+		uint16_t displayMapPosY = 0;
 		
-		int spritePosX = (player->pos.x+0x10-displayMapPosX)>>5;
+		uint16_t spritePosX = (player->pos.x+0x10-displayMapPosX)>>5;
 
 
 		nSkipped++;
@@ -523,26 +524,28 @@ T_f L1_levelMain() {
 
 		SA[0].pattern = 1;
 		SA[0].color = BDarkYellow;
-		static int framen=0;
-		framen++;
-		if (player->acc.x>0) SA[0].pattern = 0x02+((framen/3)%2);
-		if (player->acc.x<0) SA[0].pattern = 0x82+((framen/3)%2);
+
+
+		nFrame++;
+		if (player->acc.x>0) SA[0].pattern = 0x02+((nFrame/3)%2);
+		if (player->acc.x<0) SA[0].pattern = 0x82+((nFrame/3)%2);
 		
-		
-		int displayMapPosY = 0;
+		#ifdef LINUX
 		{
-			int x2=(displayMapPosX+0x20)>>6;
+			uint8_t i,j;
+			uint8_t x2=(displayMapPosX+0x20)>>6;
 			uint8_t pv = 0x80 + ((x2&3)<<4);
-			for (int i=0; i<20; i++) {
+			for (i=0; i<20; i++) {
 				uint8_t *p = &map->tiles[19-i][(x2>>2)];
 				uint8_t old = *p++;
-				for (int j=0; j<TILE_WIDTH; j++) {
+				for (j=0; j<TILE_WIDTH; j++) {
 					PN[i][j]= pv + (old<<2) + (old = *p++);
 				}
 			}	
 		}
-		
 		setTMS9918_write(ADDRESS_PN0,&PN[0][0],sizeof(PN));		
+		#endif
+		
 		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
 	}
 	

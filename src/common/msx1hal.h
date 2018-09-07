@@ -55,7 +55,7 @@ FWhite=0xF0};
 #define ADDRESS_SG  0x3800
 
 typedef struct {
-	uint8_t x,y;
+	uint8_t y,x;
 	uint8_t pattern;
 	uint8_t color;
 } Sprite;

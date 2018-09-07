@@ -20,23 +20,34 @@ LINUX_SRC_C  = $(wildcard src/common/*.c) $(wildcard src/linux/*.c)
 MSX_SRC_C    = $(wildcard src/common/*.c) $(wildcard src/msx/*.c) 
 MSX_SRC_ASM  = $(wildcard src/msx/*.s)
 
-MSX_OBJ_ASM  = $(patsubst src/msx/%.s, tmp/%.rel, $(MSX_SRC_ASM))			
+MSX_OBJ      = $(patsubst src/%.c, tmp/%.rel, $(MSX_SRC_C))	$(patsubst src/%.s, tmp/%.rel, $(MSX_SRC_ASM))		
 
 
 .PHONY: all run msx1 clean
 
 all: bin/$(NAME).rom bin/$(NAME)
 
-tmp/%.rel: src/msx/%.s 
+tmp/msx/%.rel: src/msx/%.s 
 	@echo -n "Assembling $< -> $@ ... "
 	@mkdir -p tmp && cd tmp && $(ASM) -o ../$@ ../$<  || true
 	@echo "Done!"
 
-tmp/%.ihx: $(MSX_OBJ_ASM) $(MSX_SRC_C) $(MSX_HEADERS)
+tmp/msx/%.rel: src/msx/%.c 
+	@echo -n "Compiling $< -> $@ ... "
+	@mkdir -p tmp/msx/
+	$(CCZ80) -c -D MSX -Isrc/common $(CCZ80FLAGS) -Isrc/msx $< -o tmp/msx/
+	@echo "Done!"
+
+tmp/common/%.rel: src/common/%.c 
+	@echo -n "Compiling $< -> $@ ... "
+	@mkdir -p tmp/common/
+	$(CCZ80) -c -D MSX -Isrc/common $(CCZ80FLAGS) -Isrc/msx $< -o tmp/common/
+	@echo "Done!"
+
+tmp/%.ihx: $(MSX_OBJ) $(MSX_HEADERS)
 	@echo -n "Compiling -> $@ ... "
-	#@mkdir -p tmp && cd tmp && $(CCZ80) -D MSX -I../src/common -I../src/msx $(CCZ80FLAGS) $(addprefix ../,$<) $(addprefix ../,$(MSX_SRC_C)) -o $(notdir $@) || true
 	@mkdir -p tmp
-	$(CCZ80) -D MSX -Isrc/common -Isrc/msx $(CCZ80FLAGS) $(MSX_OBJ_ASM) $(MSX_SRC_C) -o $@
+	$(CCZ80) -D MSX -Isrc/common -Isrc/msx $(CCZ80FLAGS) $(MSX_OBJ) -o $@
 	@echo "Done!"
 
 bin/%.rom: tmp/%.ihx
