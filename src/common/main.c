@@ -12,7 +12,7 @@ T_f L1_levelMain();
 T_f L1_levelDeath();
 T_f L1_levelEnd();
 
-uint8_t mySG[][8] = {
+static const uint8_t mySG[][8] = {
 
 	{ 	0b00000000,
 		0b00000000,
@@ -31,7 +31,6 @@ uint8_t mySG[][8] = {
 		0b10111101,
 		0b01000010,
 		0b00111100 },
-
 
 	{ 	0b00000000,
 		0b00011100,
@@ -74,7 +73,7 @@ uint8_t mySG[][8] = {
 
 // BG is organized as | 1 | p0 | x0 | x1 | l0 | l1 | r0 | r1
 
-uint8_t myBG0[4][8][2] = {
+static const uint8_t myBG0[4][8][2] = {
 
 	{ 	{ 0b00000000, BBlack + FDarkGreen },
 		{ 0b00000000, BBlack + FDarkGreen },
@@ -114,7 +113,7 @@ uint8_t myBG0[4][8][2] = {
 };
 
 
-uint8_t myBG1[4][8][2] = {
+static const uint8_t myBG1[4][8][2] = {
 
 	{ 	{ 0b00000000, BBlack + FDarkRed },
 		{ 0b00000000, BBlack + FDarkRed },
@@ -203,17 +202,15 @@ enum { T_PLAYER };
 enum { ST_RESTING, ST_JUMP0, ST_JUMP1, ST_JUMP2 };
 enum { LEFT=0x1, RIGHT=0x2, TOP=0x4, BOTTOM=0x8};
 
-
 T_f start() {
 
 	setTMS9918_setMode2();
 	setTMS9918_activatePage0();
 
-	
 	{
 		T_SG SG;
 		uint8_t i,j;
-		for (j=0; j<127; j++)
+		for (j=0; j<5; j++)
 			for (i=0; i<8; i++)
 				SG[j][i] = mySG[j][i];
 				
@@ -221,7 +218,7 @@ T_f start() {
 			for (i=0; i<8; i++)
 				SG[j+128][i] = reverse8(mySG[j][i]);
 				
-		setTMS9918_write(ADDRESS_SG,&SG[0][0],sizeof(SG));
+		setTMS9918_write(ADDRESS_SG,(uint8_t *)SG,sizeof(T_SG));
 	}
 
 	{
@@ -247,8 +244,8 @@ T_f start() {
 			}
 		}
 
-		setTMS9918_write(ADDRESS_PG,&PG[0][0][0],sizeof(PG));		
-		setTMS9918_write(ADDRESS_CT,&CT[0][0][0],sizeof(CT));		
+		setTMS9918_write(ADDRESS_PG,&PG[0][0][0],sizeof(T_PG));		
+		setTMS9918_write(ADDRESS_CT,&CT[0][0][0],sizeof(T_CT));		
 	}
 
 	return (T_f)(M0_menu);
@@ -530,7 +527,6 @@ T_f L1_levelMain() {
 		if (player->acc.x>0) SA[0].pattern = 0x02+((nFrame/3)%2);
 		if (player->acc.x<0) SA[0].pattern = 0x82+((nFrame/3)%2);
 		
-		#ifdef LINUX
 		{
 			uint8_t i,j;
 			uint8_t x2=(displayMapPosX+0x20)>>6;
@@ -544,8 +540,6 @@ T_f L1_levelMain() {
 			}	
 		}
 		setTMS9918_write(ADDRESS_PN0,&PN[0][0],sizeof(PN));		
-		#endif
-		
 		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
 	}
 	

@@ -70,19 +70,16 @@ void setTMS9918_setMode2() {
 	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
 	TMS9918Status.pg11 = (ADDRESS_PG  >> 11) | 0b00000011;
 	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
-	TMS9918Status.sg11 =  ADDRESS_SG >> 11;
+	TMS9918Status.sg11 =  ADDRESS_SG  >> 11;
 	
-	TMS9918Status.backdrop = BBlack;
+	TMS9918Status.backdrop  = BBlack;
 	TMS9918Status.textcolor = BWhite;
 	
-	setTMS9918_setRegisterFast(0,TMS9918Status.reg[0]);
-	setTMS9918_setRegisterFast(1,TMS9918Status.reg[1]);
-	setTMS9918_setRegisterFast(2,TMS9918Status.reg[2]);
-	setTMS9918_setRegisterFast(3,TMS9918Status.reg[3]);
-	setTMS9918_setRegisterFast(4,TMS9918Status.reg[4]);
-	setTMS9918_setRegisterFast(5,TMS9918Status.reg[5]);
-	setTMS9918_setRegisterFast(6,TMS9918Status.reg[6]);
-	setTMS9918_setRegisterFast(7,TMS9918Status.reg[7]);
+	{
+		uint8_t i=0;
+		for (i=0; i<8; ++i)
+			setTMS9918_setRegisterFast(i,TMS9918Status.reg[i]);
+	}
 }
 
 void setTMS9918_activatePage0() {
@@ -93,8 +90,8 @@ void setTMS9918_activatePage0() {
 
 void setTMS9918_activatePage1() {
 	
-	setTMS9918_setRegisterFast(2, ADDRESS_PN0 >> 10);
-	setTMS9918_setRegisterFast(5, ADDRESS_SA0 >>  7);
+	setTMS9918_setRegisterFast(2, ADDRESS_PN1 >> 10);
+	setTMS9918_setRegisterFast(5, ADDRESS_SA1 >>  7);
 }
 
 void setTMS9918_setRegister(uint8_t reg, uint8_t val) {
@@ -116,21 +113,21 @@ void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz) {
 inline static void keyboard_placeholder(void) {
 	
 	__asm
-_keyboard_read::
-	push ix
-	ld ix,#0
-	add ix,sp
+	_keyboard_read::
+		push ix
+		ld ix,#0
+		add ix,sp
 
-	in a,(#0xAA)
-	and #0xF0       ; only change bits 0-3
-	or #8           ; row 8
-	out (#0xAA),a
-	in a,(#0xA9)    ; read row into A
-	xor #0xFF
-	ld l,a
+		in a,(#0xAA)
+		and #0xF0       ; only change bits 0-3
+		or #8           ; row 8
+		out (#0xAA),a
+		in a,(#0xA9)    ; read row into A
+		xor #0xFF
+		ld l,a
 
-	pop ix
-	ret
+		pop ix
+		ret
 	__endasm;
 }
 
