@@ -37,47 +37,11 @@ const RGB colors[16] = {
 { 255,  255,  255}	
 };
 
-struct {
-	
-	uint8_t ram[0x4000];
-	
-	union {
-		uint8_t reg[8];
-		struct {
-			struct {
-				uint8_t extvid : 1;		
-				uint8_t mode2 : 1;
-				uint8_t reserved1 : 6;
-			};
-			struct {
-				uint8_t magnifySprites : 1;
-				uint8_t sprites16 : 1;
-				uint8_t reserved2: 1;
-				uint8_t mode3 : 1;
-				uint8_t mode1 : 1;
-				uint8_t generateInterrupts : 1;
-				uint8_t blankScreen : 1;
-				uint8_t mem416K : 1;
-			};
-			uint8_t pn10, ct6, pg11, sa7, sg11;
-			struct {
-				uint8_t backdrop : 4;
-				uint8_t textcolor : 4;
-			};
-		};
-	};
-} TMS9918Status;
-
-
+TMS9918Register TMS9918Status;
+uint8_t TMS9918VRAM[0x4000];
 
 static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
 	
-//	printf("PN! %X\n", &PN[0][0]-&TMS9918Status.ram[0]);
-//	printf("CT! %X\n", &CT[0][0][0]-&TMS9918Status.ram[0]);
-//	printf("PG! %X\n", &PG[0][0][0]-&TMS9918Status.ram[0]);
-//	printf("SA! %X\n", (uint8_t *)&SA[0]-&TMS9918Status.ram[0]);
-//	printf("SG! %X\n", &SG[0][0]-&TMS9918Status.ram[0]);
-
 	// TILES
 	for (int i=0; i<TILE_HEIGHT; i++) {
 		for (int j=0; j<TILE_WIDTH; j++) {
@@ -100,6 +64,7 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 			}
 		}
 	}
+	
 	
 	// SPRITES
 	for (int i=0; i<TILE_HEIGHT*8; i++) {
@@ -134,11 +99,11 @@ static inline void drawScreen() {
 	if (TMS9918Status.blankScreen) return;
 
 	if (TMS9918Status.mode2) {
-		const T_PN *PN = (T_PN *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.pn10)<<10];
-		const T_CT *CT = (T_CT *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.ct6&0x80)<< 6];
-		const T_PG *PG = (T_PG *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.pg11&0xFC)<<11];
-		const T_SA *SA = (T_SA *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.sa7 )<< 7];
-		const T_SG *SG = (T_SG *)&TMS9918Status.ram[(uint16_t)(TMS9918Status.sg11)<<11];
+		const T_PN *PN = (T_PN *)&TMS9918VRAM[(uint16_t)(TMS9918Status.pn10)<<10];
+		const T_CT *CT = (T_CT *)&TMS9918VRAM[(uint16_t)(TMS9918Status.ct6&0x80)<< 6];
+		const T_PG *PG = (T_PG *)&TMS9918VRAM[(uint16_t)(TMS9918Status.pg11&0xFC)<<11];
+		const T_SA *SA = (T_SA *)&TMS9918VRAM[(uint16_t)(TMS9918Status.sa7 )<< 7];
+		const T_SG *SG = (T_SG *)&TMS9918VRAM[(uint16_t)(TMS9918Status.sg11)<<11];
 
 		drawMode2(*PN, *CT, *PG, *SA, *SG); //only mode2 is supported
 	}
@@ -186,17 +151,13 @@ void setTMS9918_setRegister(uint8_t reg, uint8_t val) {
 
 void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz) {
 	
-//	printf("dst: %04X, sz: %04X\n",dst, sz);
-//	for (int i=0; i<10; i++) printf("%02X:",src[i]); printf("\n");
-//	for (int i=0; i<10; i++) printf("%02X:",TMS9918Status.ram[dst+i]); printf("\n");
-	memcpy(&TMS9918Status.ram[dst], src, sz);
-//	for (int i=0; i<10; i++) printf("%02X:",TMS9918Status.ram[dst+i]); printf("\n");
+	memcpy(&TMS9918VRAM[dst], src, sz);
 }
 
 
 // KEYBOARD
-uint8_t keyboardStatus;
-uint8_t keys[8831];
+static uint8_t keyboardStatus;
+static uint8_t keys[8831];
 static inline void keyboard_init(void) {
 	
 	keyboardStatus = 0;
@@ -216,9 +177,9 @@ uint8_t keyboard_read(void) { return keyboardStatus; }
 
 
 // SDL BACKEND
-SDL_Window* gWindow = NULL;
-SDL_Renderer* gRenderer = NULL;
-SDL_Texture* tex = NULL;
+static SDL_Window* gWindow = NULL;
+static SDL_Renderer* gRenderer = NULL;
+static SDL_Texture* tex = NULL;
 
 static inline int8_t initSDL() {
 	    
@@ -285,14 +246,7 @@ static inline void closeSDL() {
 
 
 int main() {
-	
-	
-//	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);		
-//	TMS9918Status.mode2 = 1;
-//	TMS9918Status.backdrop = 0xA;
-//	for (int i=0; i<8; i++) printf("%d: %02X\n",i,TMS9918Status.reg[i]);
-	
-	
+		
 	T_f	state_ptr = (T_f)start;
 	
 	if (initSDL()<0) {
@@ -318,11 +272,11 @@ int main() {
 					closeSDL();
 					return 0;
 				case SDL_KEYDOWN:
-					printf("KEY PRESSED: %d\n",e.key.keysym.sym);
+					//printf("KEY PRESSED: %d\n",e.key.keysym.sym);
 					keyboardStatus = keyboardStatus | keys[e.key.keysym.sym%sizeof(keys)];
 					break;
                 case SDL_KEYUP:
-					printf("KEY RELEASED: %d\n",e.key.keysym.sym);
+					//printf("KEY RELEASED: %d\n",e.key.keysym.sym);
 					keyboardStatus = keyboardStatus & ~keys[e.key.keysym.sym%sizeof(keys)];
                     break;
 			}

@@ -54,11 +54,34 @@ FWhite=0xF0};
 #define ADDRESS_SA1 0x1F80
 #define ADDRESS_SG  0x3800
 
-#define REPEAT2(a)  { {a}; {a}; }
-#define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
-#define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
-#define REPEAT16(a) { REPEAT8(a);  REPEAT8(a);  }
-#define REPEAT32(a) { REPEAT16(a); REPEAT16(a); }
+typedef struct {
+	union {
+		uint8_t reg[8];
+		struct {
+			struct {
+				uint8_t extvid : 1;		
+				uint8_t mode2 : 1;
+				uint8_t reserved1 : 6;
+			};
+			struct {
+				uint8_t magnifySprites : 1;
+				uint8_t sprites16 : 1;
+				uint8_t reserved2: 1;
+				uint8_t mode3 : 1;
+				uint8_t mode1 : 1;
+				uint8_t generateInterrupts : 1;
+				uint8_t blankScreen : 1;
+				uint8_t mem416K : 1;
+			};
+			uint8_t pn10, ct6, pg11, sa7, sg11;
+			struct {
+				uint8_t backdrop : 4;
+				uint8_t textcolor : 4;
+			};
+		};
+	};
+} TMS9918Register;
+
 
 typedef struct {
 	uint8_t y,x;

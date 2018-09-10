@@ -1,6 +1,11 @@
 #include <msx1hal.h>
 #include <util.h>
-//T_f start() { return (T_f)start; }
+
+#include <res/sprites.h>
+#include <res/tiles.h>
+#include <res/maps.h>
+
+void fillFrameBuffer(uint8_t tiles[24][128], uint16_t PGaddress, uint16_t x, uint16_t y);
 
 #define cropped(a,b,c) (a<(b)?(b):(a>(c)?(c):a))
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -11,148 +16,6 @@ T_f L0_levelInit();
 T_f L1_levelMain();
 T_f L1_levelDeath();
 T_f L1_levelEnd();
-
-static const uint8_t mySG[][8] = {
-
-	{ 	0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000 },
-
-	{ 	0b00111110,
-		0b01000001,
-		0b01011001,
-		0b01000001,
-		0b10000001,
-		0b10111101,
-		0b01000010,
-		0b00111100 },
-
-	{ 	0b00000000,
-		0b00011100,
-		0b00110010,
-		0b01100001,
-		0b11000001,
-		0b11000010,
-		0b01100100,
-		0b00111000 },
-
-	{ 	0b00000000,
-		0b00011110,
-		0b00110001,
-		0b01100001,
-		0b11000001,
-		0b11000010,
-		0b11000100,
-		0b01111000 },
-
-
-	{ 	0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000 },
-
-	{ 	0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000,
-		0b00000000 },
-};
-
-
-// BG is organized as | 1 | p0 | x0 | x1 | l0 | l1 | r0 | r1
-
-static const uint8_t myBG0[4][8][2] = {
-
-	{ 	{ 0b00000000, BTransparent + FGray },
-		{ 0b00000000, BTransparent + FGray },
-		{ 0b01000100, BTransparent + FGray },
-		{ 0b00000000, BTransparent + FGray },
-		{ 0b00000000, BTransparent + FGray },
-		{ 0b00000000, BTransparent + FGray },
-		{ 0b00010001, BTransparent + FGray },
-		{ 0b00000000, BTransparent + FGray } },
-
-	{ 	{ 0b11000011, BTransparent + FDarkGreen },
-		{ 0b11000011, BTransparent + FDarkGreen },
-		{ 0b11111111, BTransparent + FDarkGreen },
-		{ 0b11000011, BTransparent + FDarkGreen },
-		{ 0b11000011, BTransparent + FDarkGreen },
-		{ 0b11000011, BTransparent + FDarkGreen },
-		{ 0b11111111, BTransparent + FDarkGreen },
-		{ 0b11000011, BTransparent + FDarkGreen } },
-
-	{ 	{ 0b01111110, BTransparent + FDarkBlue },
-		{ 0b11111111, BTransparent + FDarkBlue },
-		{ 0b11000011, BTransparent + FLightBlue },
-		{ 0b11011011, BTransparent + FDarkBlue },
-		{ 0b11011011, BTransparent + FLightBlue },
-		{ 0b11000011, BTransparent + FDarkBlue },
-		{ 0b11111111, BTransparent + FLightBlue },
-		{ 0b01111110, BTransparent + FLightBlue } },
-
-	{ 	{ 0b01111110, BTransparent + FDarkRed },
-		{ 0b10100101, BTransparent + FDarkRed },
-		{ 0b11011011, BTransparent + FMediumRed },
-		{ 0b10100101, BTransparent + FDarkRed },
-		{ 0b11011011, BTransparent + FMediumRed },
-		{ 0b10100101, BTransparent + FDarkRed },
-		{ 0b11011011, BTransparent + FMediumRed },
-		{ 0b01111110, BTransparent + FMediumRed } },
-};
-
-
-static const uint8_t myBG1[4][8][2] = {
-
-	{ 	{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed } },
-
-	{ 	{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00100000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed },
-		{ 0b00000100, BBlack + FDarkRed },
-		{ 0b00010000, BBlack + FDarkRed },
-		{ 0b00000000, BBlack + FDarkRed } },
-
-	{ 	{ 0b01111110, BBlack + FDarkRed },
-		{ 0b10100101, BBlack + FDarkRed },
-		{ 0b11011011, BBlack + FDarkRed },
-		{ 0b10100101, BBlack + FDarkRed },
-		{ 0b11011011, BBlack + FDarkRed },
-		{ 0b10100101, BBlack + FDarkRed },
-		{ 0b11011011, BBlack + FDarkRed },
-		{ 0b01111110, BBlack + FDarkRed } },
-
-	{ 	{ 0b01111110, BBlack + FDarkRed },
-		{ 0b10100101, BBlack + FDarkRed },
-		{ 0b11011011, BBlack + FDarkRed },
-		{ 0b10100101, BBlack + FDarkRed },
-		{ 0b11011011, BBlack + FDarkRed },
-		{ 0b10100101, BBlack + FDarkRed },
-		{ 0b11011011, BBlack + FDarkRed },
-		{ 0b01111110, BBlack + FDarkRed } },
-};
-
-
 
 typedef struct {
 	int16_t x,y,dx,dy;
@@ -236,10 +99,6 @@ T_f start() {
 								(myBG0[cl][l][0]<<(h*(cl?2:1))) | (myBG0[cr][l][0]>>(8-h*(cr?2:1)));
 							CT[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
 								h?min(myBG0[cl][l][1], myBG0[cr][l][1]):myBG0[cl][l][1];
-							PG[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								(myBG1[cl][l][0]<<(h*(cl?2:1))) | (myBG1[cr][l][0]>>(8-h*(cr?2:1)));
-							CT[nt][0xC0+(h<<4)+(cl<<2)+(cr<<0)][l] =
-								h?min(myBG1[cl][l][1], myBG1[cr][l][1]):myBG1[cl][l][1];
 						}
 					}
 				}
@@ -257,32 +116,6 @@ T_f M0_menu() {
 
 	return (T_f)(L0_levelInit);
 }
-
-const char mapInfo[] = 
-"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-"a       #                                                                                                                      a"
-"a       #                                                                                                                      a"
-"a       #                                                                                                                      a"
-"b       #                                                                                                                      a"
-"b       #            aaaaaaa                                                                                                   a"
-"b       #                                                                                                                      a"
-"a       #                                                                                                                      a"
-"a       #                                                                                                                      a"
-"a       #             aaaaaa                                                                                                   a"
-"a   aaaaa a                                                                                                                    a"
-"a                                                                                                                              a"
-"a                                                                                                                              a"
-"a              aaaaa a                                                                                                         a"
-"a                                                                                                                              a"
-"a     aaaaa           a a aa  aaa        aaaa                                                                                  a"
-"a                                a   a       a                                                                                 a"
-"a            aaaaaa                aaa       a                                                                                 a"
-"a                               a                                                                                              a"
-"a                        a  a             a a                                                                                  a"
-"a    aaaaa                a    a          a                                                                                    a"
-"a                                        aa      aaaa                                                                          a"
-"a                                 aaaa                                                                                         a"
-"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
 T_f L0_levelInit() {
 	
@@ -349,108 +182,10 @@ T_f L0_levelInit() {
 
 int nFrame;
 int nSkipped;
-
-#ifdef MSX
-
-
-__sfr __at 0x98 VDP0;
-__sfr __at 0x99 VDP1;
-
-
-inline void NOP(void) { __asm nop __endasm; }
-inline void DI(void) { __asm di __endasm; }
-inline void EI(void) { __asm ei __endasm; }
-
-
-inline void vdpSetWriteAddress(uint8_t high) { 
 	
-//	DI();
-	VDP1 = 0;
-	NOP();
-	VDP1 = high+0b0100000;
-//	EI();
-}
-
-inline void fillCharAsm() {
-	__asm
-		add a, a
-		add a, a
-		and a, d
-		inc hl
-		add a, (HL)
-		add a, e
-		out (_VDP0),a		
-	__endasm;
-}
-		
-		
-volatile uint8_t pv_;
-volatile uint8_t *p_;
-
-uint8_t lovelyLoopIndex;
-void fillFrameBufferAsm(TMap *map, uint16_t PGaddress, uint16_t x, uint16_t y) {
-	
-	
-	uint16_t displayMapPosY = y;
-	uint16_t displayMapPosX = x;
-	vdpSetWriteAddress(PGaddress);
-	{
-		uint16_t x2=(displayMapPosX+0x20)>>6;
-		pv_ = 0x80 + ((x2&3)<<4);
-		p_ = &map->tiles[19-y][(x2>>2)];
-		
-		lovelyLoopIndex = 20;
-
-	__asm 
-//		push bc
-//		push de
-//		push hl
-
-		ld a,#0x0F
-		ld d, a
-		ld a,(_pv_)
-		ld e, a
-		ld hl, (_p_)
-	__endasm;
-
-		//for (i=0; i<20; i++) {
-	__asm 
-//		push bc
-//		push de
-//		push hl
-
-lli1$:	ld a,(hl)
-	__endasm;
-	
-
-	{
-		REPEAT32( fillCharAsm(); );
-	}
-
-	__asm
-		ld bc,#128+#32
-		or a
-		sbc hl,bc
-		ld	iy,#_lovelyLoopIndex
-		dec (iy)
-		jp NZ,lli1$
-//		pop hl
-//		pop de
-//		pop bc
-	__endasm;
-
-		//}	
-	}
-}
-#endif
-
-		
 T_SA SA;
-T_PN PN;
 
 T_f L1_levelMain() {
-
-//	printf("levelMain\n");
 
 	uint8_t x0,x1,y0,y1;
 	uint8_t x0r,x1r,y0r,y1r;
@@ -630,28 +365,8 @@ T_f L1_levelMain() {
 		if (player->acc.x<0) SA[0].pattern = 0x82+((nFrame>>2)&0x1);
 		
 
-		#ifdef LINUX
-		{
-			uint8_t i,j;
-			uint8_t x2=(displayMapPosX+0x20)>>6;
-			uint8_t pv = 0x80 + ((x2&3)<<4);
-			for (i=0; i<20; i++) {
-				uint8_t *p = &map->tiles[19-i][(x2>>2)];
-				uint8_t old = *p++;
-				for (j=0; j<TILE_WIDTH; j++) {
-					PN[i][j]= pv + (old<<2) + (old = *p++);
-				}
-			}	
-		}
-		setTMS9918_write(ADDRESS_PN0,&PN[0][0],sizeof(PN));		
-		#endif
-		
-		#ifdef MSX
-		
-			fillFrameBufferAsm(map,0x38,displayMapPosX,displayMapPosY);
-		
-		#endif
-		
+		fillFrameBuffer(map->tiles,0x38,displayMapPosX,displayMapPosY);
+				
 		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
 	}
 	
@@ -660,12 +375,10 @@ T_f L1_levelMain() {
 
 T_f L1_levelDeath() {
 
-	//std::cout << "Death" << std::endl;
 	return (T_f)(M0_menu);
 }
 
 T_f L1_levelEnd() {
 
-	//std::cout << "Goal reached!" << std::endl;
 	return (T_f)(M0_menu);
 }

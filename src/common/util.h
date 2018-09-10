@@ -8,3 +8,9 @@ static inline uint8_t reverse8(uint8_t b) {
    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
    return b;
 }
+
+#define REPEAT2(a)  { {a}; {a}; }
+#define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
+#define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
+#define REPEAT16(a) { REPEAT8(a);  REPEAT8(a);  }
+#define REPEAT32(a) { REPEAT16(a); REPEAT16(a); }

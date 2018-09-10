@@ -15,37 +15,10 @@ __sfr __at 0x98 VDP0;
 __sfr __at 0x99 VDP1;
 
 inline static void NOP(void) { __asm nop __endasm; }
-inline static void DI(void) { __asm di __endasm; }
-inline static void EI(void) { __asm ei __endasm; }
+inline static void DI (void) { __asm di __endasm; }
+inline static void EI (void) { __asm ei __endasm; }
 
-struct {
-	union {
-		uint8_t reg[8];
-		struct {
-			struct {
-				uint8_t extvid : 1;		
-				uint8_t mode2 : 1;
-				uint8_t reserved1 : 6;
-			};
-			struct {
-				uint8_t magnifySprites : 1;
-				uint8_t sprites16 : 1;
-				uint8_t reserved2: 1;
-				uint8_t mode3 : 1;
-				uint8_t mode1 : 1;
-				uint8_t generateInterrupts : 1;
-				uint8_t blankScreen_ : 1;
-				uint8_t mem416K : 1;
-			};
-			uint8_t pn10, ct6, pg11, sa7, sg11;
-			struct {
-				uint8_t backdrop : 4;
-				uint8_t textcolor : 4;
-			};
-		};
-	};
-} TMS9918Status;
-
+TMS9918Register TMS9918Status;
 
 inline static void setTMS9918_setRegisterFast(uint8_t reg, uint8_t val) {
 
@@ -55,20 +28,19 @@ inline static void setTMS9918_setRegisterFast(uint8_t reg, uint8_t val) {
 	NOP();	
 }
 
-
 void setTMS9918_setMode2() {
 	
 	TMS9918Status.reg[0] = 0;
 	TMS9918Status.reg[1] = 0;
 
 	TMS9918Status.mode2 = 1;
-	TMS9918Status.blankScreen_ = 1;
+	TMS9918Status.blankScreen = 1;
 	TMS9918Status.generateInterrupts = 1;
 	TMS9918Status.mem416K = 1;
 	
 	TMS9918Status.pn10 =  ADDRESS_PN0 >> 10;
 	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
-	TMS9918Status.pg11 = (ADDRESS_PG  >> 11) | 0b00000011;
+	TMS9918Status.pg11 = (((int16_t)ADDRESS_PG)  >> 11) | 0b00000011;
 	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
 	TMS9918Status.sg11 =  ADDRESS_SG  >> 11;
 	
@@ -149,8 +121,6 @@ inline static void keyboard_placeholder(void) {
 	__endasm;
 }
 
-
-
 void (*new_isr)(void);
 void install_isr_rom() {
 	
@@ -172,20 +142,21 @@ void install_isr_rom() {
 }
 
 
-T_f state_ptr;
-void my_isr(void)  {
+volatile uint8_t clk;
+volatile T_f state_ptr;
+void my_isr(void)  { clk++; }
 
-	state_ptr = (T_f)((*state_ptr)());
-}
 
-	
+volatile uint16_t counter;
 int main(void) {
 	
 	state_ptr = (T_f)start;
-    
     new_isr = my_isr;
-    
     install_isr_rom();
-    while (1);
-    return 1;
+    while (TRUE) {
+		clk = 0;
+		state_ptr = (T_f)((*state_ptr)());
+		counter = 0;
+		while (clk == 0) counter++;
+	};
 }
