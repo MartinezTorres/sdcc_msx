@@ -1,5 +1,11 @@
 #include <stdint.h>
 
+#ifdef LINUX
+	#include <stdio.h>
+#else
+	#define printf(...)
+#endif
+
 enum {
 BTransparent=0x0,
 BBlack,
@@ -97,6 +103,8 @@ typedef uint8_t T_CT[3][256][8]; // Pattern Color Table
 typedef uint8_t T_PG[3][256][8]; // Pattern Generator Table
 typedef Sprite  T_SA[N_SPRITES]; // Sprite Attribute Table
 typedef uint8_t T_SG[256][8];    // Sprite Generator Table
+
+typedef uint8_t Tile[8][2];
 
 void setTMS9918_setMode2(); // Configured for a single 256 character table.
 void setTMS9918_activatePage0();

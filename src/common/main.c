@@ -4,8 +4,9 @@
 #include <res/sprites.h>
 #include <res/tiles.h>
 #include <res/maps.h>
+#include <res/asciitiles.h>
 
-void fillFrameBuffer(uint8_t tiles[24][128], uint16_t PGaddress, uint16_t x, uint16_t y);
+void fillFrameBuffer(uint8_t tiles[24][128], uint8_t PNaddressH, uint16_t x, uint16_t y);
 
 #define cropped(a,b,c) (a<(b)?(b):(a>(c)?(c):a))
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -16,18 +17,6 @@ T_f L0_levelInit();
 T_f L1_levelMain();
 T_f L1_levelDeath();
 T_f L1_levelEnd();
-
-typedef struct {
-	int16_t x,y,dx,dy;
-} TRect16;
-
-typedef struct {
-	uint8_t x,y;
-} uint8_tp;
-
-typedef struct {
-	int16_t x,y;
-} int16_tp;
 
 // Maximum map size: {16*8,4*8} 
 
@@ -65,6 +54,64 @@ enum { T_PLAYER };
 enum { ST_RESTING, ST_JUMP0, ST_JUMP1, ST_JUMP2 };
 enum { LEFT=0x1, RIGHT=0x2, TOP=0x4, BOTTOM=0x8};
 
+static void writeTile(uint8_t v, Tile t) {
+	
+	uint8_t d[8];
+	uint8_t l;
+	for (l=0; l<8; l++) d[l] = t[l][0];
+	setTMS9918_write(ADDRESS_PG + (v<<3) + 0*(256*8), &d[0],8);		
+	setTMS9918_write(ADDRESS_PG + (v<<3) + 1*(256*8), &d[0],8);		
+	setTMS9918_write(ADDRESS_PG + (v<<3) + 2*(256*8), &d[0],8);
+
+	for (l=0; l<8; l++) d[l] = t[l][1];
+	setTMS9918_write(ADDRESS_CT + (v<<3) + 0*(256*8), &d[0],8);		
+	setTMS9918_write(ADDRESS_CT + (v<<3) + 1*(256*8), &d[0],8);		
+	setTMS9918_write(ADDRESS_CT + (v<<3) + 2*(256*8), &d[0],8);
+
+	printf("Wrote: %d\n", v);
+}
+
+static void initTilemap() {
+	
+	T_PG PG;
+	T_CT CT;
+	uint8_t ct, h, cl, cr, l, mr, ml;
+	
+	
+	for (h=0; h<4; h++) {
+		for (cl=0; cl<8; cl++) {
+			for (cr=0; cr<8; cr++) {
+				uint8_t *p, *pcl, *pcr;
+				p = PG[0][(h<<6)+(cl<<3)+(cr<<0)];
+				pcl = (uint8_t *)&myBG0[cl][0][0];
+				pcr = (uint8_t *)&myBG0[cr][0][0];
+				ml = 0xFF;
+				mr = 0xFF;
+				for (l=0; l<8; l++) {
+					*p = (((*pcl) << (h*(cl?2:1)))&ml) | (( (*pcr) >> (8-h*(cr?2:1)))&mr);
+					p++; pcl+=2; pcr+=2;
+					
+				}
+			}
+		}
+	}
+
+	for (h=0; h<4; h++) {
+		for (cl=0; cl<8; cl++) {
+			for (cr=0; cr<8; cr++) {
+				for (l=0; l<8; l++) {
+					CT[0][(h<<6)+(cl<<3)+(cr<<0)][l] =  h?min(myBG0[cl][l][1], myBG0[cr][l][1]):myBG0[cl][l][1];
+				}
+			}
+		}
+	}
+
+	for (ct=0; ct<3; ct++) {
+		setTMS9918_write(ADDRESS_PG + ct*sizeof(PG[0]),&PG[0][0][0],sizeof(PG[0]));		
+		setTMS9918_write(ADDRESS_CT + ct*sizeof(CT[0]),&CT[0][0][0],sizeof(CT[0]));
+	}
+}
+
 T_f start() {
 
 	setTMS9918_setMode2();
@@ -86,28 +133,8 @@ T_f start() {
 		setTMS9918_write(ADDRESS_SG,&SG[0][0],sizeof(T_SG));
 	}
 
-	{
-		T_PG PG;
-		T_CT CT;
-		uint8_t nt, h, cl, cr, l;
-		for (nt=0; nt<3; nt++) {
-			for (h=0; h<4; h++) {
-				for (cl=0; cl<4; cl++) {
-					for (cr=0; cr<4; cr++) {
-						for (l=0; l<8; l++) {
-							PG[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								(myBG0[cl][l][0]<<(h*(cl?2:1))) | (myBG0[cr][l][0]>>(8-h*(cr?2:1)));
-							CT[nt][0x80+(h<<4)+(cl<<2)+(cr<<0)][l] = 
-								h?min(myBG0[cl][l][1], myBG0[cr][l][1]):myBG0[cl][l][1];
-						}
-					}
-				}
-			}
-		}
-
-		setTMS9918_write(ADDRESS_PG,&PG[0][0][0],sizeof(T_PG));		
-		setTMS9918_write(ADDRESS_CT,&CT[0][0][0],sizeof(T_CT));		
-	}
+	initTilemap();
+		
 
 	return (T_f)(M0_menu);
 }
@@ -115,6 +142,89 @@ T_f start() {
 T_f M0_menu() {	
 
 	return (T_f)(L0_levelInit);
+}
+
+
+uint8_t ascii2tiles[128]; // Tiles 0x10 to 0x1F reserved for the bloodmeter.
+
+static void findFreeTiles(uint8_t freeTiles[256], const TMap *map) {
+	
+	{
+		uint8_t i = 0; //256;
+		do freeTiles[i]=1; while (--i);
+	}
+	
+	{
+		uint8_t i = map->size.y, j = map->size.x-1;
+		while (i--) {
+			const uint8_t *t = map->tiles[i];
+			while (j--) {
+				freeTiles[(t[j+1]<<3) + (t[j+1]<<3)] = 0;
+				freeTiles[(t[j]<<3) + (t[j+1]<<3)] = 0;
+				freeTiles[(t[j]<<3) + (t[j]<<3)] = 0;
+			}
+		}
+	}
+
+	{
+		uint8_t i = 0; //256;
+		do freeTiles[i]=freeTiles[i&0x3F]; while (--i);
+	}
+
+	{
+		uint8_t i = 0, c = 0;
+		do if (freeTiles[i]) c++; while (--i);
+		printf("FreeTiles: %d\n",c);
+	}
+
+}
+
+static void initBloodMeterTiles(uint8_t freeTiles[256]) {
+	
+	uint8_t i,l;
+	Tile tile;
+	for (l=0; l<8; l++) tile[l][1] = FLightRed;
+	tile[0][1] = FWhite;
+	tile[3][1] = FMediumRed;
+	tile[7][1] = FWhite;
+	
+	
+	for (i=0; i<9; i++) {
+		
+		tile[0][0] = 0xFF;
+		tile[7][0] = 0xFF;
+		
+		for (l=1; l<7; l++) tile[l][0] = 0xFF<<(8-i);
+		
+		uint8_t freeTile = 0;
+		while (freeTiles[freeTile]==0) freeTile++;
+		freeTiles[freeTile] = 0;
+		
+		writeTile(freeTile, tile);
+		
+		printf(" %d\n", freeTile);
+		
+		ascii2tiles[0x10+i] = freeTile;
+	}
+}
+
+static void initASCIITiles(uint8_t asciiv, uint8_t freeTiles[256]) {
+
+	uint8_t l;
+	Tile tile;
+	for (l=0; l<8; l++) tile[l][0] = font8x8[asciiv+32][l];
+	for (l=0; l<8; l++) tile[l][1] = FLightRed;
+	tile[3][1] = FMediumRed;
+	
+	{
+		uint8_t freeTile = 0;
+		while (freeTiles[freeTile]==0) freeTile++;
+		freeTiles[freeTile] = 0;
+		
+		writeTile(freeTile, tile);
+		
+		ascii2tiles[asciiv+32] = freeTile;
+	}
 }
 
 T_f L0_levelInit() {
@@ -177,6 +287,15 @@ T_f L0_levelInit() {
 		}
 	}
 
+
+	{
+		uint8_t freeTiles[256];
+		findFreeTiles(freeTiles, &levelState.map);
+		initBloodMeterTiles(freeTiles);
+		initASCIITiles(' ', freeTiles);
+	}
+
+
 	return (T_f)(L1_levelMain);
 }
 
@@ -184,6 +303,23 @@ int nFrame;
 int nSkipped;
 	
 T_SA SA;
+
+char statusBar[32];
+static void drawStatusBar(uint16_t yCoord, uint16_t PNaddressH) {
+	
+	char *p = &statusBar[0];
+	uint8_t i=0, b=(nFrame&0xFF), c=b>>3;
+	
+	printf(" %d %d %d\n", i, b, c);
+	
+	for (i=0; i<c; i++) *p++ = ascii2tiles[0x18];
+	if (i<32) { *p++ = ascii2tiles[0x10 + (b&7)]; i++;  printf(" - %d\n", ascii2tiles[0x10 + (b&7)]); }
+	for (;i<32; i++) *p++ = ascii2tiles[0x10];
+
+	printf("[... %d %d %d\n", statusBar[0], statusBar[1], statusBar[2]);
+	
+	setTMS9918_write((PNaddressH<<8) + (yCoord<<5),statusBar,sizeof(statusBar));		
+}
 
 T_f L1_levelMain() {
 
@@ -365,9 +501,10 @@ T_f L1_levelMain() {
 		if (player->acc.x<0) SA[0].pattern = 0x82+((nFrame>>2)&0x1);
 		
 
-		fillFrameBuffer(map->tiles,0x38,displayMapPosX,displayMapPosY);
-				
-		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));				
+		fillFrameBuffer(map->tiles,ADDRESS_PN0>>8,displayMapPosX,displayMapPosY);
+		drawStatusBar(21,ADDRESS_PN0>>8);	
+		setTMS9918_write(ADDRESS_SA0,(uint8_t *)SA,sizeof(SA));	
+					
 	}
 	
 	return (T_f)(L1_levelMain);
