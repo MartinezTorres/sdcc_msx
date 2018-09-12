@@ -75,7 +75,7 @@ static const uint16_t hairSprite[][16] = {
 		0b0000000000000000 },
 };
 
-static const uint16_t ballSprite[][16] = {
+static const uint16_t headSprite[][16] = {
 
 	{ 	0b0000000000000000,
 		0b0000000000000000,

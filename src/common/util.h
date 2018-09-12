@@ -9,6 +9,10 @@ static inline uint8_t reverse8(uint8_t b) {
    return b;
 }
 
+static inline uint16_t reverse16(uint16_t w) {
+   return ((uint16_t)reverse8(w&0xFF)<<8) + reverse8(w>>8) ;
+}
+
 #define REPEAT2(a)  { {a}; {a}; }
 #define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
 #define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
