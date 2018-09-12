@@ -14,7 +14,8 @@ HEXBIN = makebin -s 65536
 INCLUDES_MSX = -I. -Isrc/common -Isrc/msx
 INCLUDES_LINUX = -I. -Isrc/common -Isrc/linux
 
-CCFLAGS_MSX = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size
+#CCFLAGS_MSX = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size
+CCFLAGS_MSX = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size --fomit-frame-pointer --max-allocs-per-node 10000 --allow-unsafe-read --nostdlib --no-xinit-opt
 CCFLAGS_LINUX = -Wall -Wextra
 
 HEADERS_LINUX  = $(wildcard src/common/*.h) $(wildcard src/linux/*.h)
@@ -24,16 +25,18 @@ C_SOURCES_LINUX  = $(wildcard src/common/*.c) $(wildcard src/linux/*.c)
 C_SOURCES_MSX    = $(wildcard src/common/*.c) $(wildcard src/msx/*.c) 
 ASM_SOURCES_MSX  = $(wildcard src/msx/*.s)
 
-OBJ_MSX      = $(patsubst src/%.c, tmp/%.rel, $(C_SOURCES_MSX))	$(patsubst src/%.s, tmp/%.rel, $(ASM_SOURCES_MSX))		
+OBJ_MSX      = $(patsubst src/%.s, tmp/%.rel, $(ASM_SOURCES_MSX)) $(patsubst src/%.c, tmp/%.rel, $(C_SOURCES_MSX))			
 
 
 .PHONY: all run msx1 clean
+.PRECIOUS: tmp/%.ihx tmp/msx/%.rel
 
 all: bin/$(NAME).rom bin/$(NAME).linux
 
 tmp/msx/%.rel: src/msx/%.s 
 	@echo -n "Assembling $< -> $@ ... "
-	@mkdir -p tmp && cd tmp && $(ASM) -o ../$@ ../$<  || true
+	@mkdir -p tmp/msx/ 
+	@cd tmp && $(ASM) -o ../$@ ../$<  || true
 	@echo "Done!"
 
 tmp/msx/%.rel: src/msx/%.c 
@@ -49,7 +52,7 @@ tmp/common/%.rel: src/common/%.c
 	@echo "Done!"
 
 tmp/%.ihx: $(OBJ_MSX) $(HEADERS_MSX)
-	@echo -n "Compiling -> $@ ... "
+	@echo -n "Linking $(OBJ_MSX) -> $@ ... "
 	@mkdir -p tmp
 	@$(CCZ80) -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $(OBJ_MSX) -o $@
 	@echo "Done!"
@@ -67,7 +70,7 @@ linux: bin/$(NAME).linux
 	@./$<
 
 msx1: bin/$(NAME).rom
-	@$(MSX1) $<
+	@$(MSX1) $< || true
 
 
 clean:

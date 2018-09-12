@@ -1,9 +1,11 @@
 #include <stdint.h>
 
-#ifdef LINUX
+#ifdef MSX
+	#define printf(...)
+#elif LINUX
 	#include <stdio.h>
 #else
-	#define printf(...)
+	#error "Architecture Not Supported"
 #endif
 
 enum {
@@ -42,7 +44,6 @@ FMagenta=0xD0,
 FGray=0xE0,
 FWhite=0xF0};
 
-
 // Memory Map M2
 // PG: 0x0000-0x17FF
 // PN0: 0x1800-0x1AFF
@@ -60,9 +61,29 @@ FWhite=0xF0};
 #define ADDRESS_SA1 0x1F80
 #define ADDRESS_SG  0x3800
 
+
+typedef struct {
+	uint8_t y,x;
+	uint8_t pattern;
+	uint8_t color;
+} Sprite;
+
+#define N_SPRITES 32
+#define TILE_WIDTH 32
+#define TILE_HEIGHT 24
+typedef uint8_t T_PN[TILE_HEIGHT][TILE_WIDTH]; // Pattern Name Table
+typedef uint8_t T_CT[3][256][8]; // Pattern Color Table
+typedef uint8_t T_PG[3][256][8]; // Pattern Generator Table
+typedef Sprite  T_SA[N_SPRITES]; // Sprite Attribute Table
+typedef uint8_t T_SG[256][8];    // Sprite Generator Table
+
+typedef uint8_t Tile[8][2];
+
+
 typedef struct {
 	union {
 		uint8_t reg[8];
+		uint16_t flags;
 		struct {
 			struct {
 				uint8_t extvid : 1;		
@@ -88,30 +109,96 @@ typedef struct {
 	};
 } TMS9918Register;
 
+enum  {
+TMS9918_M2 = 0x0002,
+TMS9918_EXTVID = 0x0001,
+TMS9918_MEM416K = 0x8000,
+TMS9918_BLANK = 0x4000,
+TMS9918_GINT = 0x2000,
+TMS9918_M1 = 0x1000,
+TMS9918_M3 = 0x0800,
+TMS9918_SI = 0x0200,
+TMS9918_MAG = 0x0100,
+};
 
-typedef struct {
-	uint8_t y,x;
-	uint8_t pattern;
-	uint8_t color;
-} Sprite;
 
-#define N_SPRITES 32
-#define TILE_WIDTH 32
-#define TILE_HEIGHT 24
-typedef uint8_t T_PN[TILE_HEIGHT][TILE_WIDTH]; // Pattern Name Table
-typedef uint8_t T_CT[3][256][8]; // Pattern Color Table
-typedef uint8_t T_PG[3][256][8]; // Pattern Generator Table
-typedef Sprite  T_SA[N_SPRITES]; // Sprite Attribute Table
-typedef uint8_t T_SG[256][8];    // Sprite Generator Table
+#ifdef MSX
 
-typedef uint8_t Tile[8][2];
+	inline static void NOP(void) { __asm nop __endasm; }
+	inline static void DI (void) { __asm di __endasm; }
+	inline static void EI (void) { __asm ei __endasm; }
 
-void setTMS9918_setMode2(); // Configured for a single 256 character table.
-void setTMS9918_activatePage0();
-void setTMS9918_activatePage1();
+	__sfr __at 0x98 VDP0;
+	__sfr __at 0x99 VDP1;
 
-void setTMS9918_setRegister(uint8_t reg, uint8_t val);
-void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz);
+	TMS9918Register __at 0xF3DF TMS9918Status;
+
+	inline static void TMS9918_writeRegister(uint8_t reg) {
+
+		VDP1 = TMS9918Status.reg[reg];
+		NOP();
+		VDP1 = 0x80 | reg;
+		NOP();
+	}
+
+#elif LINUX
+	extern TMS9918Register TMS9918Status;
+
+	inline static void TMS9918_writeRegister(uint8_t reg) { (void)reg;};
+#else
+	#error "Architecture Not Supported"
+#endif
+
+inline static void TMS9918_setRegister(uint8_t reg, uint8_t val) {
+	
+	TMS9918Status.reg[reg] = val; 
+	TMS9918_writeRegister(reg);
+}
+
+inline static void TMS9918_setFlags(uint16_t flags) {
+	
+	TMS9918Status.flags = flags; 
+	TMS9918_writeRegister(0);
+	TMS9918_writeRegister(1);
+}
+
+inline static void TMS9918_setMode2() {
+
+	TMS9918Status.flags = TMS9918_M2 | TMS9918_BLANK | TMS9918_GINT | TMS9918_MEM416K;
+	
+	TMS9918Status.pn10 =  ADDRESS_PN0 >> 10;
+	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
+	TMS9918Status.pg11 = (((int16_t)ADDRESS_PG)  >> 11) | 0b00000011;
+	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
+	TMS9918Status.sg11 =  ADDRESS_SG  >> 11;
+	
+	TMS9918Status.backdrop  = BBlack;
+	TMS9918Status.textcolor = BWhite;
+	
+	{
+		uint8_t i=0;
+		for (i=0; i<8; ++i)
+			TMS9918_writeRegister(i);
+	}	
+}
+
+inline static void TMS9918_activatePage0() { 
+	
+	TMS9918Status.pn10 = ADDRESS_PN0 >> 10; TMS9918_writeRegister(2);
+	TMS9918Status.sa7  = ADDRESS_SA0 >>  7; TMS9918_writeRegister(5);
+}
+
+inline static void TMS9918_activatePage1() {
+	
+	TMS9918Status.pn10 = ADDRESS_PN1 >> 10; TMS9918_writeRegister(2);
+	TMS9918Status.sa7  = ADDRESS_SA1 >>  7; TMS9918_writeRegister(5);
+}
+
+
+void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz);
+void TMS9918_write8(uint16_t dst, const uint8_t *src, uint8_t sz8);
+
+void TMS9918_waitFrame();
 
 
 enum { KEYBOARD_RIGHT=0x80,KEYBOARD_DOWN=0x40,KEYBOARD_UP=0x20,KEYBOARD_LEFT=0x10,KEYBOARD_DEL=0x08,KEYBOARD_INS=0x04,KEYBOARD_HOME=0x02,KEYBOARD_SPACE=0x01 } ;

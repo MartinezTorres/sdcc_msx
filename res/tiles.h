@@ -1,5 +1,5 @@
 
-static const Tile myBG0[4] = {
+static const Tile const myBG0[8] = {
 
 	{ 	{ 0b00000000, BTransparent + FGray },
 		{ 0b00000000, BTransparent + FGray },
@@ -36,9 +36,6 @@ static const Tile myBG0[4] = {
 		{ 0b10100101, BTransparent + FDarkRed },
 		{ 0b11011011, BTransparent + FMediumRed },
 		{ 0b01111110, BTransparent + FMediumRed } },
-};
-
-static const Tile bloodBarTiles[4] = {
 
 	{ 	{ 0b00000000, BTransparent + FGray },
 		{ 0b00000000, BTransparent + FGray },

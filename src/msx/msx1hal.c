@@ -11,78 +11,43 @@
 #define SCREEN_WIDTH (TEX_WIDTH*4)
 #define SCREEN_HEIGHT (TEX_HEIGHT*4)
 
-__sfr __at 0x98 VDP0;
-__sfr __at 0x99 VDP1;
 
-inline static void NOP(void) { __asm nop __endasm; }
-inline static void DI (void) { __asm di __endasm; }
-inline static void EI (void) { __asm ei __endasm; }
+void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz) {
 
-TMS9918Register TMS9918Status;
-
-inline static void setTMS9918_setRegisterFast(uint8_t reg, uint8_t val) {
-
-	VDP1 = val; 
-	NOP();
-	VDP1 = 0x80 | reg;
-	NOP();	
-}
-
-void setTMS9918_setMode2() {
+	register const uint8_t *p = src;
 	
-	TMS9918Status.reg[0] = 0;
-	TMS9918Status.reg[1] = 0;
-
-	TMS9918Status.mode2 = 1;
-	TMS9918Status.blankScreen = 1;
-	TMS9918Status.generateInterrupts = 1;
-	TMS9918Status.mem416K = 1;
-	
-	TMS9918Status.pn10 =  ADDRESS_PN0 >> 10;
-	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
-	TMS9918Status.pg11 = (((int16_t)ADDRESS_PG)  >> 11) | 0b00000011;
-	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
-	TMS9918Status.sg11 =  ADDRESS_SG  >> 11;
-	
-	TMS9918Status.backdrop  = BBlack;
-	TMS9918Status.textcolor = BWhite;
-	
-	{
-		uint8_t i=0;
-		for (i=0; i<8; ++i)
-			setTMS9918_setRegisterFast(i,TMS9918Status.reg[i]);
-	}
-}
-
-void setTMS9918_activatePage0() {
-
-	setTMS9918_setRegisterFast(2, ADDRESS_PN0 >> 10);
-	setTMS9918_setRegisterFast(5, ADDRESS_SA0 >>  7);
-}
-
-void setTMS9918_activatePage1() {
-	
-	setTMS9918_setRegisterFast(2, ADDRESS_PN1 >> 10);
-	setTMS9918_setRegisterFast(5, ADDRESS_SA1 >>  7);
-}
-
-void setTMS9918_setRegister(uint8_t reg, uint8_t val) {
-	
-	setTMS9918_setRegisterFast(reg,val);
-}
-
-void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz) {
-	
-
 	VDP1 = dst & 0xFF; 
 	NOP();
 	VDP1 = 0x40 | (dst>>8);
 	NOP();	
 	
-	while (sz--) VDP0 = *src++;
+	while (sz--) VDP0 = *p++;
 }
 
-inline static void keyboard_placeholder(void) {
+void TMS9918_write8(uint16_t dst, const uint8_t *src, uint8_t sz8) {
+
+	register const uint8_t *p = src;
+	
+	VDP1 = dst & 0xFF; 
+	NOP();
+	VDP1 = 0x40 | (dst>>8);
+	NOP();	
+	
+	while (sz8--) {
+		VDP0 = *p++;
+		VDP0 = *p++;
+		VDP0 = *p++;
+		VDP0 = *p++;
+
+		VDP0 = *p++;
+		VDP0 = *p++;
+		VDP0 = *p++;
+		VDP0 = *p++;
+	}
+}
+
+
+inline static void function_placeholders(void) {
 	
 	__asm
 	_keyboard_read_old::
@@ -119,6 +84,11 @@ inline static void keyboard_placeholder(void) {
 		pop ix
 		ret
 	__endasm;
+
+	__asm
+___sdcc_call_hl:
+	jp	(hl)
+	__endasm;
 }
 
 void (*new_isr)(void);
@@ -144,19 +114,37 @@ void install_isr_rom() {
 
 volatile uint8_t clk;
 volatile T_f state_ptr;
-void my_isr(void)  { clk++; }
+void my_isr(void) { 
 
+	__asm
+		push af
+	__endasm;
 
-volatile uint16_t counter;
+	//setTMS9918_setRegister(7,BLightRed+FWhite);
+	clk++; 
+
+	__asm
+		ld A,#0x3
+		ld (#0xF3F6),A
+
+		pop af
+	__endasm;
+}
+
+void setTMS9918_waitFrame() {
+	
+	while (clk==0);
+	clk=0;
+}
+
 int main(void) {
 	
 	state_ptr = (T_f)start;
     new_isr = my_isr;
     install_isr_rom();
     while (TRUE) {
-		clk = 0;
 		state_ptr = (T_f)((*state_ptr)());
-		counter = 0;
-		while (clk == 0) counter++;
+		setTMS9918_waitFrame();
+		//setTMS9918_setRegister(7,BBlack+FWhite);
 	};
 }

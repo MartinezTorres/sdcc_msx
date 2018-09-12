@@ -66,25 +66,36 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 	}
 	
 	
-	// SPRITES
+	// SPRITES	
 	for (int i=0; i<TILE_HEIGHT*8; i++) {
 		int nShownSprites=0;
+
 		for (int j=0; j<N_SPRITES && SA[j].y!=208 && nShownSprites<4; j++) {
-			uint8_t spriteLine = i-SA[j].y-1;
-			if (spriteLine>7) continue;
+
+			uint8_t spriteLine = (i-SA[j].y-1) >> TMS9918Status.magnifySprites;
+			
+			if (spriteLine>=8 * (1+TMS9918Status.sprites16)) continue;
 			nShownSprites++;
 			
-			uint8_t p = SG[SA[j].pattern][spriteLine];
-			for (int jj=0; jj<8; jj++) {
-				int xCoord = SA[j].x - (32*!!(SA[j].color&128)) + jj;
-				if (xCoord<0 || xCoord>=TILE_WIDTH*8) continue;
-				RGB *pix = &framebuffer[i][xCoord];
-				if (p&128) {
-					if (SA[j].color&0xF) {
-						*pix=colors[SA[j].color&0xF];
+			uint8_t pattern = SA[j].pattern;			
+			if (TMS9918Status.sprites16) pattern = (pattern & 252) + !!(spriteLine>7);
+
+			int y = i;
+			int x = SA[j].x - (32*!!(SA[j].color&128));
+
+			for (int k=0; k<=TMS9918Status.sprites16; k++) {
+
+				uint8_t p = SG[pattern+2*k][spriteLine%8];
+				for (int jj=0; jj<8; jj++) {
+					
+					for (int m=0; m<=TMS9918Status.magnifySprites; m++) {
+
+						if (x>=0 && x<TILE_WIDTH*8 && (p&128) && (SA[j].color&0xF))
+							framebuffer[y][x]=colors[SA[j].color&0xF];
+						x++;
 					}
+					p*=2;
 				}
-				p*=2;
 			}
 		}
 	}
@@ -96,7 +107,7 @@ static inline void drawScreen() {
 		for (int j=0; j<TEX_WIDTH; j++)
 			framebuffer[i][j] = colors[TMS9918Status.backdrop];
 			
-	if (TMS9918Status.blankScreen) return;
+	if (! TMS9918Status.blankScreen) return;
 
 	if (TMS9918Status.mode2) {
 		const T_PN *PN = (T_PN *)&TMS9918VRAM[(uint16_t)(TMS9918Status.pn10)<<10];
@@ -119,41 +130,15 @@ static inline void drawScreen() {
 // CT: 0x2000-0x37FF
 // SG: 0x3800-0x3FFF
 
-void setTMS9918_setMode2() {
-	
-	memset(&TMS9918Status,0,sizeof(TMS9918Status));
-	TMS9918Status.mode2 = 1;
-	TMS9918Status.generateInterrupts = 1;
-	TMS9918Status.mem416K = 1;
-	
-	TMS9918Status.pn10 =  ADDRESS_PN0 >> 10;
-	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
-	TMS9918Status.pg11 = (ADDRESS_PG  >> 11) | 0b00000011;
-	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
-	TMS9918Status.sg11 =  ADDRESS_SG >> 11;
-}
-
-void setTMS9918_activatePage0() {
-
-	TMS9918Status.pn10 = ADDRESS_PN0 >> 10;
-	TMS9918Status.sa7  = ADDRESS_SA0 >>  7;
-}
-void setTMS9918_activatePage1() {
-	
-	TMS9918Status.pn10 = ADDRESS_PN1 >> 10;
-	TMS9918Status.sa7  = ADDRESS_SA1 >>  7;
-}
-
-void setTMS9918_setRegister(uint8_t reg, uint8_t val) {
-	
-	TMS9918Status.reg[reg] = val;
-}
-
-void setTMS9918_write(uint16_t dst, uint8_t *src, uint16_t sz) {
+void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz) {
 	
 	memcpy(&TMS9918VRAM[dst], src, sz);
 }
 
+void TMS9918_write8(uint16_t dst, const uint8_t *src, uint8_t sz8) {
+	
+	memcpy(&TMS9918VRAM[dst], src, sz8*8);
+}
 
 // KEYBOARD
 static uint8_t keyboardStatus;
@@ -245,9 +230,40 @@ static inline void closeSDL() {
 }
 
 
+void setTMS9918_waitFrame() {
+
+	SDL_Event e;
+	// handle event on queue
+	while (SDL_PollEvent(&e) != 0) {
+		
+		switch( e.type ){
+			
+			case SDL_QUIT:
+				closeSDL();
+				return ;
+			case SDL_KEYDOWN:
+				//printf("KEY PRESSED: %d\n",e.key.keysym.sym);
+				keyboardStatus = keyboardStatus | keys[e.key.keysym.sym%sizeof(keys)];
+				break;
+			case SDL_KEYUP:
+				//printf("KEY RELEASED: %d\n",e.key.keysym.sym);
+				keyboardStatus = keyboardStatus & ~keys[e.key.keysym.sym%sizeof(keys)];
+				break;
+		}
+	}
+	
+	drawScreen();
+	
+	displayFramebufferSDL();
+	
+	uint32_t delay = SDL_GetTicks()%(1000/60);
+	SDL_Delay(1000/60-delay);
+}
+
+
 int main() {
 		
-	T_f	state_ptr = (T_f)start;
+	T_f state_ptr = (T_f)start;
 	
 	if (initSDL()<0) {
 		printf("Failed to initialize SDL!\n");
@@ -257,38 +273,8 @@ int main() {
 	keyboard_init();
 	
 	while (TRUE) {
-
-		uint32_t ticksStart = SDL_GetTicks();
-		
 		state_ptr = (T_f)((*state_ptr)());
-		
-		SDL_Event e;
-		// handle event on queue
-		while (SDL_PollEvent(&e) != 0) {
-			
-			switch( e.type ){
-				
-				case SDL_QUIT:
-					closeSDL();
-					return 0;
-				case SDL_KEYDOWN:
-					//printf("KEY PRESSED: %d\n",e.key.keysym.sym);
-					keyboardStatus = keyboardStatus | keys[e.key.keysym.sym%sizeof(keys)];
-					break;
-                case SDL_KEYUP:
-					//printf("KEY RELEASED: %d\n",e.key.keysym.sym);
-					keyboardStatus = keyboardStatus & ~keys[e.key.keysym.sym%sizeof(keys)];
-                    break;
-			}
-		}
-		
-		drawScreen();
-		
-		displayFramebufferSDL();
-		
-		uint32_t delay = SDL_GetTicks()-ticksStart;
-		if (delay>(1000/60-1)) delay = (1000/60-1);
-		SDL_Delay(1000/60-delay);
+		setTMS9918_waitFrame();
 	}    
 }
 

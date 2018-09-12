@@ -4,7 +4,8 @@ void fillFrameBuffer(uint8_t tiles[24][128],  uint8_t PNaddressH, uint16_t x, ui
 	
 	T_PN PN;
 
-	uint16_t displayMapPosY = y;
+	(void)y;
+	//uint16_t displayMapPosY = y;
 	uint16_t displayMapPosX = x;
 
 	uint8_t i,j;
@@ -14,8 +15,9 @@ void fillFrameBuffer(uint8_t tiles[24][128],  uint8_t PNaddressH, uint16_t x, ui
 		uint8_t *p = &tiles[19-i][(x2>>2)];
 		uint8_t old = *p++;
 		for (j=0; j<TILE_WIDTH; j++) {
-			PN[i][j]= pv + (old<<3) + (old = *p++);
+			old = pv + (0x3F&(old<<3)) + *p++;
+			PN[i][j]= old;
 		}
 	}	
-	setTMS9918_write(PNaddressH<<8,&PN[0][0],sizeof(PN));		
+	TMS9918_write(PNaddressH<<8,&PN[0][0],sizeof(PN));		
 }
