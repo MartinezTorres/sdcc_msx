@@ -68,14 +68,26 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 	
 	// SPRITES	
 	for (int i=0; i<TILE_HEIGHT*8; i++) {
-		int nShownSprites=0;
+		
+		int maxSprite;
+		{
+			int nShownSprites=0;
 
-		for (int j=0; j<N_SPRITES && SA[j].y!=208 && nShownSprites<4; j++) {
+			for (maxSprite=0; maxSprite<N_SPRITES && SA[maxSprite].y!=208 && nShownSprites<4; maxSprite++) {
+
+				uint8_t spriteLine = (i-SA[maxSprite].y-1) >> TMS9918Status.magnifySprites;
+				
+				if (spriteLine>=8 * (1+TMS9918Status.sprites16)) continue;
+				nShownSprites++;
+			}
+		}
+
+
+		for (int j=maxSprite; j>=0; j--) {
 
 			uint8_t spriteLine = (i-SA[j].y-1) >> TMS9918Status.magnifySprites;
 			
 			if (spriteLine>=8 * (1+TMS9918Status.sprites16)) continue;
-			nShownSprites++;
 			
 			uint8_t pattern = SA[j].pattern;			
 			if (TMS9918Status.sprites16) pattern = (pattern & 252) + !!(spriteLine>7);
@@ -230,7 +242,7 @@ static inline void closeSDL() {
 }
 
 
-void setTMS9918_waitFrame() {
+void TMS9918_waitFrame() {
 
 	SDL_Event e;
 	// handle event on queue
@@ -274,7 +286,7 @@ int main() {
 	
 	while (TRUE) {
 		state_ptr = (T_f)((*state_ptr)());
-		setTMS9918_waitFrame();
+		TMS9918_waitFrame();
 	}    
 }
 

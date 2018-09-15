@@ -2,15 +2,23 @@
 #define TRUE 1
 #define FALSE 0
 
-static inline uint8_t reverse8(uint8_t b) {
+static inline uint8_t reverse8(uint8_t i) {
+   
+   register uint8_t b = i;
    b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
    b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
    b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
    return b;
 }
 
-static inline uint16_t reverse16(uint16_t w) {
-   return ((uint16_t)reverse8(w&0xFF)<<8) + reverse8(w>>8) ;
+static inline uint16_t reverse16(uint16_t i) {
+   
+   register uint16_t b = i;
+   b = (b & 0xFF00) >> 8 | (b & 0x00FF) << 8;
+   b = (b & 0xF0F0) >> 4 | (b & 0x0F0F) << 4;
+   b = (b & 0xCCCC) >> 2 | (b & 0x3333) << 2;
+   b = (b & 0xAAAA) >> 1 | (b & 0x5555) << 1;
+   return b;
 }
 
 #define REPEAT2(a)  { {a}; {a}; }

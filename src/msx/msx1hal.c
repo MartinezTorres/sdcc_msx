@@ -131,7 +131,7 @@ void my_isr(void) {
 	__endasm;
 }
 
-void setTMS9918_waitFrame() {
+void TMS9918_waitFrame() {
 	
 	while (clk==0);
 	clk=0;
@@ -144,7 +144,7 @@ int main(void) {
     install_isr_rom();
     while (TRUE) {
 		state_ptr = (T_f)((*state_ptr)());
-		setTMS9918_waitFrame();
+		TMS9918_waitFrame();
 		//setTMS9918_setRegister(7,BBlack+FWhite);
 	};
 }
