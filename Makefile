@@ -62,6 +62,8 @@ bin/%.rom: tmp/%.ihx
 	@$(HEXBIN) $< $(<:.ihx=.tmp)
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
 	@echo "Done!"
+	@echo ROM used: $$((`grep "CODE .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`*100/32768))% of 32K
+	@echo RAM used: $$((`grep "DATA  .*\. bytes ("  tmp/skel.map | cut -c 64-70 | xargs`*100/16384))% of 16K
 
 bin/%.linux:  $(C_SOURCES_LINUX) $(HEADERS_LINUX)
 	$(CC) -g -D LINUX $(INCLUDES_LINUX) $(CCFLAGS_LINUX) $(C_SOURCES_LINUX) -lSDL2 -o $@ 
