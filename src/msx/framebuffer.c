@@ -1,6 +1,4 @@
 #include <msx1hal.h>
-#include <util.h>
-
 
 inline void vdpSetWriteAddress(uint8_t high) { 
 	

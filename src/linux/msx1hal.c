@@ -1,6 +1,4 @@
-#include <stdint.h>
 #include <msx1hal.h>
-#include <util.h>
 
 #include <SDL2/SDL.h>
 #include "font8x8_basic.h"

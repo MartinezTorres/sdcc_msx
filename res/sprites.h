@@ -1,4 +1,4 @@
-static const uint8_t mySG[][8] = {
+/*static const uint8_t mySG[][8] = {
 
 	{ 	0b00000000,
 		0b00000000,
@@ -53,9 +53,9 @@ static const uint8_t mySG[][8] = {
 		0b00000000,
 		0b00000000,
 		0b00000000 },
-};
+};*/
 
-static const uint16_t hairSprite[][16] = {
+static const U16x16 hairSprite[] = {
 
 /*	{ 	0b0000100000000000,
 		0b0001100011110000,
@@ -110,7 +110,7 @@ static const uint16_t hairSprite[][16] = {
 		0b0000000000000000,
 		0b0000000000000000 },
 
-	{ 	0b0000111001110000,
+/*	{ 	0b0000111001110000,
 		0b0001111111111000,
 		0b0001111111111000,
 		0b0001111111111000,
@@ -125,10 +125,10 @@ static const uint16_t hairSprite[][16] = {
 		0b0000000000000000,
 		0b0000000000000000,
 		0b0000000000000000,
-		0b0000000000000000 },
+		0b0000000000000000 },*/
 };
 
-static const uint16_t headSprite[][16] = {
+static const U16x16 headSprite[] = {
 
 	{ 	0b0000000000000000,
 		0b0000000000000000,

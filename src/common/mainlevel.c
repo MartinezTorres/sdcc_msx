@@ -1,5 +1,5 @@
 #include <capetsrace.h>
-
+#include <res/sprites.h>
 
 extern void fillFrameBuffer(uint8_t tiles[24][128], uint8_t PNaddressH, uint16_t x, uint16_t y);
 
@@ -46,11 +46,39 @@ T_f start() {
 
 	TMS9918_setRegister(7,BBlack+FWhite);
 	TMS9918_setMode2(FALSE);
-	initGraphics();
-
+	
+	initHeadSprites(hairSprite, headSprite);
+	
+	
 	return (T_f)(M0_menu);
 }
 /*
+ * 
+static void findFreeTiles(uint8_t freeTiles[256], const TMap *map) {
+	
+	{
+		uint8_t i = 255; //256;
+		do freeTiles[i]=1; while (--i);
+	}
+	
+	{
+		uint8_t i = map->size.y, j = map->size.x-1;
+		while (i--) {
+			const uint8_t *t = map->tiles[i];
+			while (j--) {
+				freeTiles[(t[j+1]<<3) + t[j+1]] = 0;
+				freeTiles[(t[j]<<3) + t[j+1]] = 0;
+				freeTiles[(t[j]<<3) + t[j]] = 0;
+			}
+		}
+	}
+
+	{
+		uint8_t i = 255; //256;
+		do freeTiles[i]=freeTiles[i&0x3F]; while (--i);
+	}
+}
+
 
 T_f L0_levelInit() {
 	

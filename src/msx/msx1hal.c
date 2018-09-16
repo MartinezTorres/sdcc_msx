@@ -1,6 +1,4 @@
-#include <stdint.h>
 #include <msx1hal.h>
-#include <util.h>
 
 // VDP EMULATOR
 #define N_SPRITES 32
