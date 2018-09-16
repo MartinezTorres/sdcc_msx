@@ -19,5 +19,5 @@ void fillFrameBuffer(uint8_t tiles[24][128],  uint8_t PNaddressH, uint16_t x, ui
 			PN[i][j]= old;
 		}
 	}	
-	TMS9918_write(PNaddressH<<8,&PN[0][0],sizeof(PN));		
+	TMS9918_memcpy(PNaddressH<<8,&PN[0][0],sizeof(PN));		
 }

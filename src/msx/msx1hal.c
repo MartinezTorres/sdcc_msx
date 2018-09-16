@@ -11,9 +11,9 @@
 #define SCREEN_WIDTH (TEX_WIDTH*4)
 #define SCREEN_HEIGHT (TEX_HEIGHT*4)
 
+void TMS9918_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
 
-void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz) {
-
+	register uint16_t sz = size;
 	register const uint8_t *p = src;
 	
 	VDP1 = dst & 0xFF; 
@@ -24,26 +24,17 @@ void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz) {
 	while (sz--) VDP0 = *p++;
 }
 
-void TMS9918_write8(uint16_t dst, const uint8_t *src, uint8_t sz8) {
+void TMS9918_memset(uint16_t dst, uint8_t value, uint16_t size) {
 
-	register const uint8_t *p = src;
+	register uint16_t sz = size;
+	register const uint8_t val = value;
 	
 	VDP1 = dst & 0xFF; 
 	NOP();
 	VDP1 = 0x40 | (dst>>8);
 	NOP();	
 	
-	while (sz8--) {
-		VDP0 = *p++;
-		VDP0 = *p++;
-		VDP0 = *p++;
-		VDP0 = *p++;
-
-		VDP0 = *p++;
-		VDP0 = *p++;
-		VDP0 = *p++;
-		VDP0 = *p++;
-	}
+	while (sz--) VDP0 = val;
 }
 
 

@@ -1,5 +1,35 @@
 #include <stdint.h>
 
+#define TRUE 1
+#define FALSE 0
+
+uint8_t reverse8(uint8_t i);
+uint16_t reverse16(uint16_t i);
+
+
+#define cropped(a,b,c) (a<(b)?(b):(a>(c)?(c):a))
+#define max(a,b) ((a)>(b)?(a):(b))
+#define min(a,b) ((a)<(b)?(a):(b))
+
+#define REPEAT2(a)  { {a}; {a}; }
+#define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
+#define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
+#define REPEAT16(a) { REPEAT8(a);  REPEAT8(a);  }
+#define REPEAT32(a) { REPEAT16(a); REPEAT16(a); }
+
+typedef struct {
+	int16_t x,y,dx,dy;
+} TRect16;
+
+typedef struct {
+	uint8_t x,y;
+} uint8_tp;
+
+typedef struct {
+	int16_t x,y;
+} int16_tp;
+
+
 #ifdef MSX
 	#define printf(...)
 #elif LINUX
@@ -77,8 +107,8 @@ typedef uint8_t T_PG[3][256][8]; // Pattern Generator Table
 typedef Sprite  T_SA[N_SPRITES]; // Sprite Attribute Table
 typedef uint8_t T_SG[256][8];    // Sprite Generator Table
 
-typedef uint8_t Tile[8][2];
-
+typedef uint16_t U16x16[16];
+typedef uint8_t U8x8[8];
 
 typedef struct {
 	union {
@@ -121,13 +151,12 @@ TMS9918_SI = 0x0200,
 TMS9918_MAG = 0x0100,
 };
 
-
 #ifdef MSX
 
-	inline static void NOP(void) { __asm nop __endasm; }
-	inline static void DI (void) { __asm di __endasm; }
-	inline static void EI (void) { __asm ei __endasm; }
-
+	#define NOP(a) __asm nop __endasm
+	#define DI(a) __asm nop __endasm
+	#define EI(a) __asm nop __endasm
+	
 	__sfr __at 0x98 VDP0;
 	__sfr __at 0x99 VDP1;
 
@@ -149,56 +178,23 @@ TMS9918_MAG = 0x0100,
 	#error "Architecture Not Supported"
 #endif
 
-inline static void TMS9918_setRegister(uint8_t reg, uint8_t val) {
-	
-	TMS9918Status.reg[reg] = val; 
-	TMS9918_writeRegister(reg);
-}
 
-inline static void TMS9918_setFlags(uint16_t flags) {
-	
-	TMS9918Status.flags = flags; 
-	TMS9918_writeRegister(0);
-	TMS9918_writeRegister(1);
-}
-
-inline static void TMS9918_setMode2() {
-
-	TMS9918Status.flags = TMS9918_M2 | TMS9918_BLANK | TMS9918_GINT | TMS9918_MEM416K;
-	
-	TMS9918Status.pn10 =  ADDRESS_PN0 >> 10;
-	TMS9918Status.ct6  = (ADDRESS_CT  >>  6) | 0b01111111;
-	TMS9918Status.pg11 = (((int16_t)ADDRESS_PG)  >> 11) | 0b00000011;
-	TMS9918Status.sa7  =  ADDRESS_SA0 >>  7;
-	TMS9918Status.sg11 =  ADDRESS_SG  >> 11;
-	
-	TMS9918Status.backdrop  = BBlack;
-	TMS9918Status.textcolor = BWhite;
-	
-	{
-		uint8_t i=0;
-		for (i=0; i<8; ++i)
-			TMS9918_writeRegister(i);
-	}	
-}
-
-inline static void TMS9918_activatePage0() { 
-	
-	TMS9918Status.pn10 = ADDRESS_PN0 >> 10; TMS9918_writeRegister(2);
-	TMS9918Status.sa7  = ADDRESS_SA0 >>  7; TMS9918_writeRegister(5);
-}
-
-inline static void TMS9918_activatePage1() {
-	
-	TMS9918Status.pn10 = ADDRESS_PN1 >> 10; TMS9918_writeRegister(2);
-	TMS9918Status.sa7  = ADDRESS_SA1 >>  7; TMS9918_writeRegister(5);
-}
-
-
-void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz);
-void TMS9918_write8(uint16_t dst, const uint8_t *src, uint8_t sz8);
+void TMS9918_setRegister(uint8_t reg, uint8_t val);
+void TMS9918_setFlags(uint16_t flags);
+void TMS9918_setMode2(uint8_t use3pages);
+void TMS9918_activatePage0();
+void TMS9918_activatePage1();
+void TMS9918_memcpy(uint16_t dst, const uint8_t *src, uint16_t size);
+void TMS9918_memset(uint16_t dst, uint8_t value, uint16_t size);
 
 void TMS9918_waitFrame();
+
+// 16 bit pattern manipulation functions
+uint16_t *hflip16(U16x16 s);
+uint16_t *rotate16(U16x16 s);
+uint16_t *load16(U16x16 s, const U16x16 src);
+void writeSprite16(uint8_t pos, U16x16 s);
+
 
 
 enum { KEYBOARD_RIGHT=0x80,KEYBOARD_DOWN=0x40,KEYBOARD_UP=0x20,KEYBOARD_LEFT=0x10,KEYBOARD_DEL=0x08,KEYBOARD_INS=0x04,KEYBOARD_HOME=0x02,KEYBOARD_SPACE=0x01 } ;

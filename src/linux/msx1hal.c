@@ -17,6 +17,7 @@
 
 typedef struct { uint8_t r,g,b; } RGB;
 RGB framebuffer[TEX_HEIGHT][TEX_WIDTH];
+RGB framebufferOld[TEX_HEIGHT][TEX_WIDTH];
 
 const RGB colors[16] = {
 {   0,    0,    0},
@@ -142,15 +143,15 @@ static inline void drawScreen() {
 // CT: 0x2000-0x37FF
 // SG: 0x3800-0x3FFF
 
-void TMS9918_write(uint16_t dst, const uint8_t *src, uint16_t sz) {
-	
-	memcpy(&TMS9918VRAM[dst], src, sz);
+void TMS9918_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
+	memcpy(&TMS9918VRAM[dst], src, size);
 }
 
-void TMS9918_write8(uint16_t dst, const uint8_t *src, uint8_t sz8) {
-	
-	memcpy(&TMS9918VRAM[dst], src, sz8*8);
+
+void TMS9918_memset(uint16_t dst, uint8_t value, uint16_t size) {
+	memset(&TMS9918VRAM[dst], value, size);
 }
+
 
 // KEYBOARD
 static uint8_t keyboardStatus;
@@ -217,9 +218,20 @@ static inline int8_t displayFramebufferSDL() {
 
 		//Lock texture for manipulation
 		SDL_LockTexture( tex, NULL, &mPixels, &mPitch );
+		
+		RGB framebufferMixed[TEX_HEIGHT][TEX_WIDTH];
+		for (int i=0; i<TEX_HEIGHT; i++) {
+			for (int j=0; j<TEX_WIDTH; j++) {
+				framebufferMixed[i][j].r = (framebuffer[i][j].r + framebufferOld[i][j].r)/2;
+				framebufferMixed[i][j].g = (framebuffer[i][j].g + framebufferOld[i][j].g)/2;
+				framebufferMixed[i][j].b = (framebuffer[i][j].b + framebufferOld[i][j].b)/2;
+				framebufferOld[i][j] = framebuffer[i][j];
+			}
+		}
+
 				
 		//Copy loaded/formatted surface pixels
-		memcpy( mPixels, framebuffer, sizeof(framebuffer));
+		memcpy( mPixels, framebufferMixed, sizeof(framebufferMixed));
 
 		//Unlock texture to update
 		SDL_UnlockTexture( tex );
