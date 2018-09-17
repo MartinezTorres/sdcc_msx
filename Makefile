@@ -74,8 +74,7 @@ linux: bin/$(NAME).linux
 msx1: bin/$(NAME).rom
 	@$(MSX1) $< || true
 
-
-
+# GENERATE UTILITIES
 INCLUDE := util
 CUSTOM_FLAGS = `grep -m1 "^// FLAGS:" util/$*.cc | cut -d: -f2-`
 COMMON_FLAGS := -Werror -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-65500 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe $(patsubst %,-I%,$(INCLUDE))
@@ -91,7 +90,16 @@ bin/%: util/%.cc $(ALL_INCLUDES) $$(DEPS)
 %: util/%.cc bin/% 
 	@echo
 
+# GENERATE FONTS
+.PHONY: fonts
+fonts: tmp/fonts.h
+	@echo
 
+tmp/fonts.h: bin/mkFont res/fonts/*
+	@echo -n "Generating  $@ ... "
+	rm -f $@
+	for f in res/fonts/*.png; do bin/mkFont $$f >> $@; done
+	@echo "Done!"
 
 clean:
 	@echo -n "Cleaning... "
