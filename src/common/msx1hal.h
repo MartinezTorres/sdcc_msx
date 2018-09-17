@@ -162,7 +162,7 @@ TMS9918_MAG = 0x0100,
 
 	TMS9918Register __at 0xF3DF TMS9918Status;
 
-	inline static void TMS9918_writeRegister(uint8_t reg) {
+	inline void TMS9918_writeRegister(uint8_t reg) {
 
 		VDP1 = TMS9918Status.reg[reg];
 		NOP();
@@ -173,7 +173,7 @@ TMS9918_MAG = 0x0100,
 #elif LINUX
 	extern TMS9918Register TMS9918Status;
 
-	inline static void TMS9918_writeRegister(uint8_t reg) { (void)reg;};
+	inline void TMS9918_writeRegister(uint8_t reg) { (void)reg;};
 #else
 	#error "Architecture Not Supported"
 #endif

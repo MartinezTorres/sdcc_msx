@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
 			std::cout << (j?",":"");
 			printf("0x%02X",font[i][j]);
 		}
-		std::cout << "} ";
-		if (i>31 and i<127) std::cout << " \\\\ '" << char(i) << "' ";
+		std::cout << "} " << (i==128?' ':',');
+//		if (i>31 and i<127) std::cout << " \\\\ '" << char(i) << "' ";
 		std::cout << std::endl;
 	}
 	std::cout << "};" << std::endl;
