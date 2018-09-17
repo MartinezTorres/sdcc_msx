@@ -42,3 +42,6 @@ make run          ;Build and launch the executable for linux
 - [Alberto de Hoyo Nebot](http://albertodehoyonebot.blogspot.com.es/p/how-to-create-msx-roms-with-sdcc.html])
 - [Avelino Herrera Morales](http://msx.atlantes.org/index_en.html])
 - [Laurens Holst](http://map.grauw.nl/)
+
+## Selected fonts from:
+- [Electrickeet](http://electrickeet.com/line-itfont.html)

@@ -35,6 +35,15 @@ void TMS9918_memset(uint16_t dst, uint8_t value, uint16_t size) {
 	while (sz--) VDP0 = val;
 }
 
+void getMSXROMTile(U8x8 shape, uint8_t ascii) {
+
+	uint8_t *p = (uint8_t *)(0x1BBF + (ascii<<3));
+	uint8_t *s = &shape[0];
+	*s++ = *p++; *s++ = *p++; *s++ = *p++; *s++ = *p++; 
+	*s++ = *p++; *s++ = *p++; *s++ = *p++; *s++ = *p++; 
+}
+
+
 
 inline static void function_placeholders(void) {
 	

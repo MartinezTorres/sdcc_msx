@@ -27,7 +27,6 @@ ASM_SOURCES_MSX  = $(wildcard src/msx/*.s)
 
 OBJ_MSX      = $(patsubst src/%.s, tmp/%.rel, $(ASM_SOURCES_MSX)) $(patsubst src/%.c, tmp/%.rel, $(C_SOURCES_MSX))			
 
-
 .PHONY: all run msx1 clean
 .PRECIOUS: tmp/%.ihx tmp/msx/%.rel
 
@@ -68,11 +67,30 @@ bin/%.rom: tmp/%.ihx
 bin/%.linux:  $(C_SOURCES_LINUX) $(HEADERS_LINUX)
 	$(CC) -g -D LINUX $(INCLUDES_LINUX) $(CCFLAGS_LINUX) $(C_SOURCES_LINUX) -lSDL2 -o $@ 
 
+
 linux: bin/$(NAME).linux
 	@./$<
 
 msx1: bin/$(NAME).rom
 	@$(MSX1) $< || true
+
+
+
+INCLUDE := util
+CUSTOM_FLAGS = `grep -m1 "^// FLAGS:" util/$*.cc | cut -d: -f2-`
+COMMON_FLAGS := -Werror -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-65500 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe $(patsubst %,-I%,$(INCLUDE))
+ALL_INCLUDES := $(shell for d in $(INCLUDE); do find -L $$d -type f -name \*.h -print 2>/dev/null ; done) $(shell for d in $(INCLUDE); do find -L $$d -type f -name \*.hpp -print 2>/dev/null ; done)
+.SECONDEXPANSION:
+
+.PRECIOUS:bin/%
+bin/%: util/%.cc $(ALL_INCLUDES) $$(DEPS)
+	@mkdir -p $(@D)
+	@echo "\033[1;32m[$(@F)]\033[1;31m\033[12GFLAGS:\033[0m$(CUSTOM_FLAGS)"
+	@$(CXX) -o $@ $< $(shell echo $(COMMON_FLAGS) $(CUSTOM_FLAGS)) 
+
+%: util/%.cc bin/% 
+	@echo
+
 
 
 clean:

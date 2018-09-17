@@ -41,12 +41,16 @@ uint8_t TMS9918VRAM[0x4000];
 
 static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
 	
+	uint8_t pnMask = TMS9918Status.pg11 & 3;
+	uint8_t ctMask1 = (TMS9918Status.ct6>>5) & 3;
+	uint8_t ctMask2 = ((TMS9918Status.ct6&31)<<3)+7;
+	
 	// TILES
 	for (int i=0; i<TILE_HEIGHT; i++) {
 		for (int j=0; j<TILE_WIDTH; j++) {
 			for (int ii=0; ii<8; ii++) {
-				uint8_t p = PG[i/8][PN[i][j]][ii];
-				uint8_t c = CT[i/8][PN[i][j]][ii];
+				uint8_t p = PG[(i/8)&pnMask][PN[i][j]][ii];
+				uint8_t c = CT[(i/8)&ctMask1][PN[i][j]&ctMask2][ii];
 				RGB *pix = &framebuffer[i*8+ii][j*8];
 				for (int jj=0; jj<8; jj++) {
 					if (p&128) {
@@ -149,6 +153,18 @@ void TMS9918_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
 void TMS9918_memset(uint16_t dst, uint8_t value, uint16_t size) {
 	memset(&TMS9918VRAM[dst], value, size);
 }
+
+void getMSXROMTile(U8x8 shape, uint8_t ascii) {
+	
+	if (ascii>31 && ascii<128) {
+		uint8_t l;
+		for (l=0; l<8; l++) shape[l] = reverse8(font8x8_basic[ascii][l]);
+	} else {
+		uint8_t l;
+		for (l=0; l<8; l++) shape[l] = 0x00;
+	}
+}
+
 
 
 // KEYBOARD

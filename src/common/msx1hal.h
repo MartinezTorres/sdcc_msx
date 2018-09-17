@@ -197,9 +197,10 @@ void writeSprite16(uint8_t pos, U16x16 s);
 
 // Text rutines
 // Precondition, freeTiles must have at least 1 spot!
-void addASCIITile(uint8_t freeTiles[256], uint8_t ascii, const U8x8 shape, const U8x8 color);
+void getMSXROMTile(U8x8 shape, uint8_t ascii);
+uint8_t addASCIITile(uint8_t freeTiles[256], uint8_t ascii, const U8x8 shape, const U8x8 color);
 void uint16ToString(char *msg, uint16_t v, uint8_t enableZeroPad);
-void printStr(uint8_t x, uint8_t y, const char *msg);
+void printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *msg);
 
 
 enum { KEYBOARD_RIGHT=0x80,KEYBOARD_DOWN=0x40,KEYBOARD_UP=0x20,KEYBOARD_LEFT=0x10,KEYBOARD_DEL=0x08,KEYBOARD_INS=0x04,KEYBOARD_HOME=0x02,KEYBOARD_SPACE=0x01 } ;
