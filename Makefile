@@ -22,7 +22,7 @@ HEADERS        = $(wildcard src/common/*.h) $(wildcard tmp/res/*.h)
 HEADERS_LINUX  = $(HEADERS) $(wildcard src/linux/*.h)
 HEADERS_MSX    = $(HEADERS) $(wildcard src/msx/*.h) 
 
-C_SOURCES      = $(wildcard src/common/*.c) $(wildcard tmp/res/*.c)
+C_SOURCES      = $(wildcard src/common/*.c)
 C_SOURCES_LINUX= $(C_SOURCES) $(wildcard src/linux/*.c)
 C_SOURCES_MSX  = $(C_SOURCES) $(wildcard src/msx/*.c) 
 ASM_SOURCES_MSX= $(wildcard src/msx/*.s)
