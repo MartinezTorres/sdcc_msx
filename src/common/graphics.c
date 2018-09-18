@@ -1,8 +1,5 @@
 #include <capetsrace.h>
 
-#include <res/sprites.h>
-#include <res/tiles.h>
-
 void initHeadSprites(const U16x16 hair[2], const U16x16 face[4]) {
 	
 	uint16_t tmp[16];

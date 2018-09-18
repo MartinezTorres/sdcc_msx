@@ -1,3 +1,7 @@
+#include <stdint.h>
+typedef uint16_t U16x16[16];
+typedef uint8_t U8x8[8];
+
 /*static const uint8_t mySG[][8] = {
 
 	{ 	0b00000000,
@@ -55,7 +59,7 @@
 		0b00000000 },
 };*/
 
-static const U16x16 hairSprite[] = {
+const U16x16 hairSprite[] = {
 
 /*	{ 	0b0000100000000000,
 		0b0001100011110000,
@@ -128,7 +132,7 @@ static const U16x16 hairSprite[] = {
 		0b0000000000000000 },*/
 };
 
-static const U16x16 headSprite[] = {
+const U16x16 headSprite[] = {
 
 	{ 	0b0000000000000000,
 		0b0000000000000000,

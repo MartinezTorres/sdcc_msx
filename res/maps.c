@@ -1,3 +1,7 @@
+#include <stdint.h>
+typedef uint16_t U16x16[16];
+typedef uint8_t U8x8[8];
+
 const char mapInfo[] = 
 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 "a       #                                                                                                                      a"

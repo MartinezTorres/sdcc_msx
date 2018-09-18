@@ -1,4 +1,45 @@
-static const U8x8 BGTileShapes[] = {
+#include <stdint.h>
+typedef uint16_t U16x16[16];
+typedef uint8_t U8x8[8];
+
+enum {
+BTransparent=0x0,
+BBlack,
+BMediumGreen,
+BLightGreen,
+BDarkBlue,  	
+BLightBlue,
+BDarkRed,
+BCyan,
+BMediumRed,
+BLightRed,
+BDarkYellow,
+BLightYellow,
+BDarkGreen,
+BMagenta,
+BGray,
+BWhite};
+
+enum {
+FTransparent=0x00,
+FBlack=0x10,
+FMediumGreen=0x20,
+FLightGreen=0x30,
+FDarkBlue=0x40,
+FLightBlue=0x50,
+FDarkRed=0x60,
+FCyan=0x70,
+FMediumRed=0x80,	
+FLightRed=0x90,
+FDarkYellow=0xA0,
+FLightYellow=0xB0,
+FDarkGreen=0xC0,
+FMagenta=0xD0,
+FGray=0xE0,
+FWhite=0xF0};
+
+
+const U8x8 BGTileShapes[] = {
 
 	{ 	0b00000000,
 		0b00000000,
@@ -74,7 +115,7 @@ static const U8x8 BGTileShapes[] = {
 };
 
 
-static const U8x8 BGTileColors[] = {
+const U8x8 BGTileColors[] = {
 
 	{ 	BTransparent + FGray,
 		BTransparent + FGray,

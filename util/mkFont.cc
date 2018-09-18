@@ -40,6 +40,7 @@ int main(int argc, char *argv[]) {
 	
 
 	std::cout << "// Font file generated from:" << name.substr(name.rfind('-')+1) << std::endl;
+	std::cout << "#include <stdint.h>" << std::endl;
 	std::cout << "const uint8_t " << name << "[128][8] = {" << std::endl;
 	for (int i=0; i<128; i++) {
 		std::cout << std::hex << "\t {";

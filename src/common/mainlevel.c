@@ -1,5 +1,4 @@
 #include <capetsrace.h>
-#include <res/sprites.h>
 
 extern void fillFrameBuffer(uint8_t tiles[24][128], uint8_t PNaddressH, uint16_t x, uint16_t y);
 

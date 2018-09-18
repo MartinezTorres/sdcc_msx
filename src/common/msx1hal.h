@@ -213,4 +213,6 @@ typedef void (*T_void)(void);
 typedef T_void (*T_f)(void);
 T_f start();
 
+#include <resources.h>
+
 

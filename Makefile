@@ -11,55 +11,90 @@ MSX1 = openmsx -machine C-BIOS_MSX1 -carta
 HEXBIN = makebin -s 65536
 
 #VERBOSE = -V
-INCLUDES_MSX = -I. -Isrc/common -Isrc/msx
-INCLUDES_LINUX = -I. -Isrc/common -Isrc/linux
+INCLUDES_MSX = -Itmp/inc -Isrc/common -Isrc/msx
+INCLUDES_LINUX = -Itmp/inc -Isrc/common -Isrc/linux
 
-#CCFLAGS_MSX = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size
 CCFLAGS_MSX = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size --fomit-frame-pointer --max-allocs-per-node 10000 --allow-unsafe-read --nostdlib --no-xinit-opt
 CCFLAGS_LINUX = -Wall -Wextra
 
 
-HEADERS        = tmp/fonts.h
-HEADERS_LINUX  = $(HEADERS) $(wildcard src/common/*.h) $(wildcard src/linux/*.h)
-HEADERS_MSX    = $(HEADERS) $(wildcard src/common/*.h) $(wildcard src/msx/*.h) 
+HEADERS        = $(wildcard src/common/*.h) $(wildcard tmp/res/*.h) 
+HEADERS_LINUX  = $(HEADERS) $(wildcard src/linux/*.h)
+HEADERS_MSX    = $(HEADERS) $(wildcard src/msx/*.h) 
 
-C_SOURCES_LINUX= $(wildcard src/common/*.c) $(wildcard src/linux/*.c)
-C_SOURCES_MSX  = $(wildcard src/common/*.c) $(wildcard src/msx/*.c) 
+C_SOURCES      = $(wildcard src/common/*.c) $(wildcard tmp/res/*.c)
+C_SOURCES_LINUX= $(C_SOURCES) $(wildcard src/linux/*.c)
+C_SOURCES_MSX  = $(C_SOURCES) $(wildcard src/msx/*.c) 
 ASM_SOURCES_MSX= $(wildcard src/msx/*.s)
 
-ASM_OBJ_MSX    = $(patsubst src/%.s, tmp/%.rel, $(ASM_SOURCES_MSX))			
-C_OBJ_MSX      = $(patsubst src/%.c, tmp/%.rel, $(C_SOURCES_MSX))			
 
 .PHONY: all run msx1 clean
-.PRECIOUS: tmp/%.ihx tmp/msx/%.rel tmp/common/%.rel tmp/*/*.rel
+.PRECIOUS: tmp/%.ihx tmp/msx/%.rel tmp/common/%.rel tmp/%.lib
 
 all: bin/$(NAME).rom bin/$(NAME).linux
 
-tmp/msx/%.rel: src/msx/%.s $(HEADERS_MSX)
+##########################################################
+### RESOURCE SECTION
+
+# GENERATE FONTS
+FONTS_SRC := $(wildcard res/fonts/*.png)
+FONTS_GEN := $(patsubst res/fonts/%.png, tmp/res/%.c, $(FONTS_SRC))			
+.PHONY: fonts
+fonts: FONTS_GEN
+	@true
+
+tmp/res/%.c: res/fonts/%.png bin/mkFont
+	@echo -n "Generating  $@ ... "
+	@mkdir -p $(@D)
+	@bin/mkFont $< > $@
+	@echo "Done!"
+
+
+# COPY RESOURCE FILES
+RESOURCES_SRC := $(wildcard res/*.c)
+RESOURCES_GEN := $(patsubst res/%.c, tmp/res/%.c, $(RESOURCES_SRC))			
+
+tmp/res/%.c: res/%.c
+	@echo -n "Generating  $@ ... "
+	@mkdir -p $(@D)
+	@cp $< $@
+	@echo "Done!"
+
+# COPY RESOURCE HEADER
+RESOURCES = $(FONTS_GEN) $(RESOURCES_GEN)
+tmp/inc/resources.h: $(RESOURCES)
+	@echo -n "Generating  $@ ... "
+	@mkdir -p $(@D)
+	@rm -f $@
+	@for f in $^; do cproto -qve < $$f >> $@ ; done
+	@echo "Done!"
+
+C_SOURCES += $(RESOURCES)
+
+##########################################################
+### MSX SECTION
+ASM_OBJ_MSX    = $(addprefix tmp/,$(ASM_SOURCES_MSX:.s=.rel))
+C_OBJ_MSX      = $(addprefix tmp/,$(C_SOURCES_MSX:.c=.rel))
+
+tmp/%.rel: %.s $(HEADERS_MSX) tmp/inc/resources.h
 	@echo -n "Assembling $< -> $@ ... "
-	@mkdir -p tmp/msx/ 
+	@mkdir -p $(@D)
 	@cd tmp && $(ASM) -o ../$@ ../$<  || true
 	@echo "Done!"
 
-tmp/msx/%.rel: src/msx/%.c $(HEADERS_MSX)
-	@echo -n "Compiling $< -> $@ ... "
-	@mkdir -p tmp/msx/
-	@$(CCZ80) -c -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $< -o tmp/msx/
-	@echo "Done!"
-
-tmp/common/%.rel: src/common/%.c $(HEADERS_MSX)
-	@echo -n "Compiling $< -> $@ ... "
-	@mkdir -p tmp/common/
-	@$(CCZ80) -c -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $< -o tmp/common/
+tmp/%.rel: %.c $(HEADERS_MSX) tmp/inc/resources.h
+	@echo -n "Compiling $< -> $@ ... $(@D)"
+	@mkdir -p $(@D)
+	@$(CCZ80) -c -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $< -o $@
 	@echo "Done!"
 
 tmp/%.lib: $(C_OBJ_MSX)
 	@echo -n "Linking $(OBJ_MSX) -> $@ ... "
-	@mkdir -p tmp
+	@mkdir -p $(@D)
 	sdcclib $@ $(C_OBJ_MSX)
 	@echo "Done!"
 
-tmp/%.ihx: $(ASM_OBJ_MSX) tmp/%.lib $(HEADERS_MSX)
+tmp/%.ihx: $(ASM_OBJ_MSX) tmp/%.lib 
 	@echo -n "Linking $(ASM_OBJ_MSX) -> $@ ... "
 	@mkdir -p tmp
 	$(CCZ80) -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $(ASM_OBJ_MSX) tmp/skel.lib -o $@
@@ -73,17 +108,23 @@ bin/%.rom: tmp/%.ihx
 	@echo ROM used: $$((`grep -m1 "CODE .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`*100/32768))% of 32K  $$((`grep -m1 "CODE .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`))
 	@echo RAM used: $$((`grep -m1 "DATA .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`*100/16384))% of 16K
 
-bin/%.linux:  $(C_SOURCES_LINUX) $(HEADERS_LINUX)
-	$(CC) -g -D LINUX $(INCLUDES_LINUX) $(CCFLAGS_LINUX) $(C_SOURCES_LINUX) -lSDL2 -o $@ 
+msx1: bin/$(NAME).rom
+	@$(MSX1) $< || true
 
+##########################################################
+### LINUX SECTION
+
+bin/%.linux:  $(C_SOURCES_LINUX) $(HEADERS_LINUX) tmp/inc/resources.h
+	@mkdir -p $(@D)
+	$(CC) -g -D LINUX $(INCLUDES_LINUX) $(CCFLAGS_LINUX) $(C_SOURCES_LINUX) -lSDL2 -o $@ 
 
 linux: bin/$(NAME).linux
 	@./$<
 
-msx1: bin/$(NAME).rom
-	@$(MSX1) $< || true
 
-# GENERATE UTILITIES
+##########################################################
+### UTILITIES SECTION
+
 INCLUDE := util
 CUSTOM_FLAGS = `grep -m1 "^// FLAGS:" util/$*.cc | cut -d: -f2-`
 COMMON_FLAGS := -Werror -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-65500 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe $(patsubst %,-I%,$(INCLUDE))
@@ -97,19 +138,7 @@ bin/%: util/%.cc $(ALL_INCLUDES) $$(DEPS)
 	@$(CXX) -o $@ $< $(shell echo $(COMMON_FLAGS) $(CUSTOM_FLAGS)) 
 
 %: util/%.cc bin/% 
-	@echo
-
-# GENERATE FONTS
-.PHONY: fonts
-fonts: tmp/fonts.h
-	@echo
-
-tmp/fonts.h: bin/mkFont res/fonts/*
-	@echo -n "Generating  $@ ... "
-	rm -f $@
-	mkdir -p tmp
-	for f in res/fonts/*.png; do bin/mkFont $$f >> $@; done
-	@echo "Done!"
+	@true
 
 clean:
 	@echo -n "Cleaning... "
