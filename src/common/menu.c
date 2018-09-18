@@ -1,16 +1,19 @@
 #include <capetsrace.h>
 
+#include <nicefonts.h>
+
 T_f M0_menu();
 extern T_f L0_levelInit();
 
 
 T_f M0_menu() {	
 
+	uint8_t freeTiles[256];
 
 	TMS9918_setFlags(TMS9918_M2 | TMS9918_BLANK | TMS9918_GINT | TMS9918_MEM416K | TMS9918_SI | TMS9918_MAG);	
 
+
 	{
-		uint8_t freeTiles[256];
 		uint8_t c;
 		for (c = 0; c<255; c++) freeTiles[c]=1;
 		for (c = 32; c<128; c++) {
@@ -26,6 +29,10 @@ T_f M0_menu() {
 		}
 		printStr(ADDRESS_PN0, 5,17,"Choose Wisely:");
 	}
+	{
+		printStr(ADDRESS_PN0, 5,18,"DONE!");
+	}
+
 
 	{
 		T_SA SA;

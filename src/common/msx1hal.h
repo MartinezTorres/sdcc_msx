@@ -1,4 +1,7 @@
+#pragma once
+
 #include <stdint.h>
+
 
 #define TRUE 1
 #define FALSE 0
@@ -173,7 +176,7 @@ TMS9918_MAG = 0x0100,
 #elif LINUX
 	extern TMS9918Register TMS9918Status;
 
-	inline void TMS9918_writeRegister(uint8_t reg) { (void)reg;};
+	inline static void TMS9918_writeRegister(uint8_t reg) { (void)reg;};
 #else
 	#error "Architecture Not Supported"
 #endif
