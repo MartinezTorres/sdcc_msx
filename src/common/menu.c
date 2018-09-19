@@ -47,6 +47,18 @@ static void colorMsg(const TMsg *msg, uint8_t colorSlim, uint8_t colorBold) {
 		TMS9918_memcpy(ADDRESS_CT + (((uint16_t)msg->bold[i])<<3), color, 8);
 }
 
+static void draw(T_SA SA, uint8_t f, uint8_t selection) {
+
+	f= f&(0xFF>>2);
+	
+	SA[1].pattern = (selection==1?SPRITE_HEAD_LEFT:SPRITE_HEAD_LEFT + ((f>>2)<<2));
+	SA[1].color = (f&1 ? BLightRed : BWhite);
+
+	SA[3].pattern = (selection==1?SPRITE_HEAD_RIGHT:SPRITE_HEAD_RIGHT + ((15-(f>>2))<<2));
+	SA[3].color = (f&1 ? BLightYellow : BWhite);
+
+}
+
 T_f M0_menu() {	
 
 	uint8_t freeTiles[256];
@@ -96,38 +108,28 @@ T_f M0_menu() {
 		int8_t keyCountDown = 0;
 		T_SA SA;
 		uint8_t f = 0;	
+
+		SA[0].x = (256/4)-16;
+		SA[0].y = 50-14;
+		SA[0].pattern = SPRITE_HAIR_MA;
+		SA[0].color = BWhite;
+
+		SA[1].x = (256/4)-16;
+		SA[1].y = 50;
+		
+
+		SA[2].x = (3*256/4)-16;
+		SA[2].y = 50-2;
+		SA[2].pattern = SPRITE_HAIR_LC;
+		SA[2].color = BWhite;
+
+		SA[3].x = (3*256/4)-16;
+		SA[3].y = 50;
+
+		SA[4].y = 208;
+
 		while (TRUE) {
-			
-			SA[0].x = (256/4)-16;
-			SA[0].y = 50-14;
-			SA[0].pattern = SPRITE_HAIR_MA;
-			SA[0].color = BWhite;
-
-			SA[1].x = (256/4)-16;
-			SA[1].y = 50;
-			SA[1].pattern = SPRITE_HEAD_LEFT +((f>>2)<<2);
-			SA[1].color = BLightRed;
-			if (f&1) SA[1].color = BWhite;
-			if (selection==1) SA[1].pattern = SPRITE_HEAD_LEFT;
-			
-
-			SA[2].x = (3*256/4)-16;
-			SA[2].y = 50-2;
-			SA[2].pattern = SPRITE_HAIR_LC;
-			SA[2].color = BWhite;
-
-			SA[3].x = (3*256/4)-16;
-			SA[3].y = 50;
-			SA[3].pattern = SPRITE_HEAD_RIGHT + ((15-(f>>2))<<2);
-			SA[3].color = BLightYellow;
-			if (f&1) SA[3].color = BWhite;
-			if (selection==0) SA[3].pattern = SPRITE_HEAD_RIGHT;
-
-			SA[4].y = 208;
-			
 			f++;
-			f= f&(0xFF>>2);
-			
 			{
 				uint8_t keys = keyboard_read();
 				
@@ -167,6 +169,8 @@ T_f M0_menu() {
 				
 				if (keyCountDown && !(keys & KEYBOARD_DOWN) && !(keys & KEYBOARD_UP)) keyCountDown--;
 			}
+			draw(SA, f, selection);
+
 
 			if (f&1){
 				printStrRAW(ADDRESS_PN0, 12,14,MchooseWisely.slim);
@@ -185,9 +189,8 @@ T_f M0_menu() {
 				
 				printStrRAW(ADDRESS_PN0,  9,16+selection,MrightTriangle.bold);
 				printStrRAW(ADDRESS_PN0, 21,16+selection,MleftTriangle.bold);
-			}
+			}			
 
-			
 			TMS9918_memcpy(ADDRESS_SA0,(uint8_t *)SA,32);
 			TMS9918_waitFrame();
 		}

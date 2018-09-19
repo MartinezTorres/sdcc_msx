@@ -68,12 +68,12 @@ void initRenderedText(uint8_t *slim, uint8_t *bold, uint8_t freeTiles[256], cons
 		uint8_t c = *str++;
 		pasteCharacter(workAreaSlim,workAreaBold,font,c,maxDisplacement);
 		maxDisplacement -= 8;
-		printf("A: %d\n",maxDisplacement);
+//		printf("A: %d\n",maxDisplacement);
 	}
 	while (*str) {
 		uint8_t c = *str;
 		int8_t mx = min(XX-8, maxDisplacement+6);
-		printf("MX A: %d %d\n",maxDisplacement, mx);
+//		printf("MX A: %d %d\n",maxDisplacement, mx);
 		
 		while (maxDisplacement < mx) {
 			uint8_t i;
@@ -89,7 +89,7 @@ void initRenderedText(uint8_t *slim, uint8_t *bold, uint8_t freeTiles[256], cons
 		}
 		out:
 
-		printf("MX B: %d %d\n\n",maxDisplacement, mx);
+//		printf("MX B: %d %d\n\n",maxDisplacement, mx);
 		
 		if (maxDisplacement<=2) {
 			
