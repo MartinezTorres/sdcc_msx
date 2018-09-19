@@ -91,6 +91,8 @@ T_f M0_menu() {
 	TMS9918_setFlags(TMS9918_M2 | TMS9918_BLANK | TMS9918_GINT | TMS9918_MEM416K | TMS9918_SI | TMS9918_MAG);	
 
 	{
+		int8_t spaces[2] = { space, space };
+		int8_t keyCountDown = 0;
 		int8_t selection = 0;
 		T_SA SA;
 		uint8_t f = 0;	
@@ -126,7 +128,13 @@ T_f M0_menu() {
 			f++;
 			f= f&(0xFF>>2);
 			
-			//TMS9918_memset(ADDRESS_PN0, space, sizeof(T_PN));
+			TMS9918_memcpy(ADDRESS_PN0 + 9+((16+0)<<5),spaces,2);
+			TMS9918_memcpy(ADDRESS_PN0 + 9+((17+0)<<5),spaces,2);
+			TMS9918_memcpy(ADDRESS_PN0 + 9+((18+0)<<5),spaces,2);
+
+			TMS9918_memcpy(ADDRESS_PN0 + 21+((16+0)<<5),spaces,2);
+			TMS9918_memcpy(ADDRESS_PN0 + 21+((17+0)<<5),spaces,2);
+			TMS9918_memcpy(ADDRESS_PN0 + 21+((18+0)<<5),spaces,2);
 
 			if (f&1){
 				printStrRAW(ADDRESS_PN0, 12,14,MchooseWisely.slim);
@@ -150,22 +158,24 @@ T_f M0_menu() {
 			{
 				uint8_t keys = keyboard_read();
 				
-				if (keys & KEYBOARD_UP) {
-					if (!selection) 
-						selection = 2;
-					else
+				if (keyCountDown==0 && (keys & KEYBOARD_UP)) {
+					if (selection)
 						selection--;
+						
+					keyCountDown=6;
 				}
 
-				if (keys & KEYBOARD_DOWN) {
-					if (selection==2) 
-						selection = 0;
-					else
+				if (keyCountDown==0 && (keys & KEYBOARD_DOWN)) {
+					if (selection!=2)
 						selection++;
+
+					keyCountDown=6;
 				}
 
 				if (keys & KEYBOARD_SPACE) {
 				}
+				
+				if (keyCountDown) keyCountDown--;
 			}
 			
 			TMS9918_memcpy(ADDRESS_SA0,(uint8_t *)SA,32);
