@@ -34,15 +34,15 @@ void printStrRAW(uint16_t baseAddress, uint8_t x, uint8_t y, const char *msg) {
 
 typedef struct {uint8_t slim[32], bold[32];} TMsg; 
 
-static void colorMsg(const TMsg *msg) {
+static void colorMsg(const TMsg *msg, uint8_t colorSlim, uint8_t colorBold) {
 	
 	uint8_t i;
 	U8x8 color;
-	for (i=0; i<8; i++) color[i] = BBlack + FLightRed;
+	for (i=0; i<8; i++) color[i] = colorSlim; 
 	for (i=0; msg->slim[i]; i++) 
 		TMS9918_memcpy(ADDRESS_CT + (((uint16_t)msg->slim[i])<<3), color, 8);
 
-	for (i=0; i<8; i++) color[i] = BBlack + FGray;
+	for (i=0; i<8; i++) color[i] = colorBold;
 	for (i=0; msg->bold[i]; i++) 
 		TMS9918_memcpy(ADDRESS_CT + (((uint16_t)msg->bold[i])<<3), color, 8);
 }
@@ -58,6 +58,7 @@ T_f M0_menu() {
 	
 	TMsg MleftTriangle, MrightTriangle;
 	
+	int8_t selection = 0;
 
 	{
 		uint8_t c;
@@ -81,19 +82,18 @@ T_f M0_menu() {
 	initRenderedText(MraceMode.slim, MraceMode.bold, freeTiles, "vs. Mode", font_zelda, 3);
 	initRenderedText(MleftTriangle.slim, MleftTriangle.bold, freeTiles, "\x11", font_zelda, 3);
 	initRenderedText(MrightTriangle.slim, MrightTriangle.bold, freeTiles, "\x10", font_zelda, 3);
-	colorMsg (&MchooseWisely);
-	colorMsg (&MmarieAntoniette);
-	colorMsg (&MlouisCapet);
-	colorMsg (&MraceMode);
-	colorMsg (&MrightTriangle);
-	colorMsg (&MleftTriangle);
+	colorMsg (&MchooseWisely, BBlack + FWhite, BBlack + FDarkRed);
+	colorMsg (&MmarieAntoniette, BBlack + FWhite, BBlack + FDarkRed);
+	colorMsg (&MlouisCapet, BBlack + FWhite, BBlack + FDarkRed);
+	colorMsg (&MraceMode, BBlack + FWhite, BBlack + FDarkRed);
+	colorMsg (&MrightTriangle, BBlack + FWhite, BBlack + FDarkRed);
+	colorMsg (&MleftTriangle, BBlack + FWhite, BBlack + FDarkRed);
 
 	TMS9918_setFlags(TMS9918_M2 | TMS9918_BLANK | TMS9918_GINT | TMS9918_MEM416K | TMS9918_SI | TMS9918_MAG);	
 
 	{
 		int8_t spaces[2] = { space, space };
 		int8_t keyCountDown = 0;
-		int8_t selection = 0;
 		T_SA SA;
 		uint8_t f = 0;	
 		while (TRUE) {
@@ -128,13 +128,45 @@ T_f M0_menu() {
 			f++;
 			f= f&(0xFF>>2);
 			
-			TMS9918_memcpy(ADDRESS_PN0 + 9+((16+0)<<5),spaces,2);
-			TMS9918_memcpy(ADDRESS_PN0 + 9+((17+0)<<5),spaces,2);
-			TMS9918_memcpy(ADDRESS_PN0 + 9+((18+0)<<5),spaces,2);
+			{
+				uint8_t keys = keyboard_read();
+				
+				if (keyCountDown==0 && (keys & KEYBOARD_UP)) {
 
-			TMS9918_memcpy(ADDRESS_PN0 + 21+((16+0)<<5),spaces,2);
-			TMS9918_memcpy(ADDRESS_PN0 + 21+((17+0)<<5),spaces,2);
-			TMS9918_memcpy(ADDRESS_PN0 + 21+((18+0)<<5),spaces,2);
+					TMS9918_memcpy(ADDRESS_PN0 + 9+((16+selection)<<5),spaces,2);
+					TMS9918_memcpy(ADDRESS_PN0 +21+((16+selection)<<5),spaces,2);
+
+					if (selection)
+						selection--;
+					
+					f = 0;
+					keyCountDown=3;
+				}
+
+				if (keyCountDown==0 && (keys & KEYBOARD_DOWN)) {
+
+					TMS9918_memcpy(ADDRESS_PN0 + 9+((16+selection)<<5),spaces,2);
+					TMS9918_memcpy(ADDRESS_PN0 +21+((16+selection)<<5),spaces,2);
+
+					if (selection!=2)
+						selection++;
+
+					f = 0;
+					keyCountDown=3;
+				}
+
+				if (keys & KEYBOARD_SPACE) {
+					
+					switch (selection) {
+					case 0: colorMsg (&MmarieAntoniette, BBlack + FWhite, BBlack + FDarkGreen); break;
+					case 1: colorMsg (&MlouisCapet, BBlack + FWhite, BBlack + FDarkGreen); break;
+					case 2: colorMsg (&MraceMode, BBlack + FWhite, BBlack + FDarkGreen); break;
+					}
+					break;
+				}
+				
+				if (keyCountDown && !(keys & KEYBOARD_DOWN) && !(keys & KEYBOARD_UP)) keyCountDown--;
+			}
 
 			if (f&1){
 				printStrRAW(ADDRESS_PN0, 12,14,MchooseWisely.slim);
@@ -155,30 +187,36 @@ T_f M0_menu() {
 				printStrRAW(ADDRESS_PN0, 21,16+selection,MleftTriangle.bold);
 			}
 
-			{
-				uint8_t keys = keyboard_read();
-				
-				if (keyCountDown==0 && (keys & KEYBOARD_UP)) {
-					if (selection)
-						selection--;
-						
-					keyCountDown=6;
-				}
-
-				if (keyCountDown==0 && (keys & KEYBOARD_DOWN)) {
-					if (selection!=2)
-						selection++;
-
-					keyCountDown=6;
-				}
-
-				if (keys & KEYBOARD_SPACE) {
-				}
-				
-				if (keyCountDown) keyCountDown--;
-			}
 			
 			TMS9918_memcpy(ADDRESS_SA0,(uint8_t *)SA,32);
+			TMS9918_waitFrame();
+		}
+	}
+	
+	{
+		
+		uint8_t f = 0;	
+		while (TRUE) {
+
+			if (f++&1){
+				printStrRAW(ADDRESS_PN0, 12,14,MchooseWisely.slim);
+				printStrRAW(ADDRESS_PN0, 11,16,MmarieAntoniette.slim);
+				printStrRAW(ADDRESS_PN0, 12,17,MlouisCapet.slim);
+				printStrRAW(ADDRESS_PN0, 13,18,MraceMode.slim);
+				
+				printStrRAW(ADDRESS_PN0,  9,16+selection,MrightTriangle.slim);
+				printStrRAW(ADDRESS_PN0, 21,16+selection,MleftTriangle.slim);
+
+			} else {
+				printStrRAW(ADDRESS_PN0, 12,14,MchooseWisely.bold);
+				printStrRAW(ADDRESS_PN0, 11,16,MmarieAntoniette.bold);
+				printStrRAW(ADDRESS_PN0, 12,17,MlouisCapet.bold);
+				printStrRAW(ADDRESS_PN0, 13,18,MraceMode.bold);
+				
+				printStrRAW(ADDRESS_PN0,  9,16+selection,MrightTriangle.bold);
+				printStrRAW(ADDRESS_PN0, 21,16+selection,MleftTriangle.bold);
+			}
+			
 			TMS9918_waitFrame();
 		}
 	}
