@@ -87,7 +87,7 @@ FWhite=0xF0};
 // SP: 0x3800-0x3FFF
 
 #define ADDRESS_PN0 0x1800
-#define ADDRESS_PN1 0x1B00
+#define ADDRESS_PN1 0x1C00
 #define ADDRESS_CT  0x2000
 #define ADDRESS_PG  0x0000
 #define ADDRESS_SA0 0x1F00

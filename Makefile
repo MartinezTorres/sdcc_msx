@@ -5,6 +5,9 @@ ADDR_DATA = 0xC000
 DATA_SIZE = 0x3000
 
 
+MSG = "\033[1;32m[$(@F)]\033[1;31m\033[0m"
+
+
 CCZ80 = sdcc
 ASM = sdasz80
 MSX1 = openmsx -machine C-BIOS_MSX1 -carta
@@ -29,7 +32,6 @@ ASM_SOURCES_MSX= $(wildcard src/msx/*.s)
 
 
 .PHONY: all run msx1 clean
-.PRECIOUS: tmp/%.ihx tmp/msx/%.rel tmp/common/%.rel tmp/%.lib
 
 all: bin/$(NAME).rom bin/$(NAME).linux
 
@@ -44,10 +46,9 @@ fonts: FONTS_GEN
 	@true
 
 tmp/res/%.c: res/fonts/%.png bin/mkFont
-	@echo -n "Generating  $@ ... "
+	@echo $(MSG)
 	@mkdir -p $(@D)
 	@bin/mkFont $< > $@
-	@echo "Done!"
 
 
 # COPY RESOURCE FILES
@@ -55,19 +56,17 @@ RESOURCES_SRC := $(wildcard res/*.c)
 RESOURCES_GEN := $(patsubst res/%.c, tmp/res/%.c, $(RESOURCES_SRC))			
 
 tmp/res/%.c: res/%.c
-	@echo -n "Generating  $@ ... "
+	@echo $(MSG)
 	@mkdir -p $(@D)
 	@cp $< $@
-	@echo "Done!"
 
 # COPY RESOURCE HEADER
 RESOURCES = $(FONTS_GEN) $(RESOURCES_GEN)
 tmp/inc/resources.h: $(RESOURCES)
-	@echo -n "Generating  $@ ... "
+	@echo $(MSG)
 	@mkdir -p $(@D)
 	@rm -f $@
 	@for f in $^; do cproto -qve < $$f >> $@ ; done
-	@echo "Done!"
 
 C_SOURCES += $(RESOURCES)
 
@@ -76,45 +75,44 @@ C_SOURCES += $(RESOURCES)
 ASM_OBJ_MSX    = $(addprefix tmp/,$(ASM_SOURCES_MSX:.s=.rel))
 C_OBJ_MSX      = $(addprefix tmp/,$(C_SOURCES_MSX:.c=.rel))
 
+.PRECIOUS: tmp/%.ihx $(ASM_OBJ_MSX) $(C_OBJ_MSX) tmp/%.lib 
+
 tmp/%.rel: %.s $(HEADERS_MSX) tmp/inc/resources.h
-	@echo -n "Assembling $< -> $@ ... "
+	@echo $(MSG)
 	@mkdir -p $(@D)
-	@cd tmp && $(ASM) -o ../$@ ../$<  || true
-	@echo "Done!"
+	@cd tmp && $(ASM) -o ../$@ ../$<
 
 tmp/%.rel: %.c $(HEADERS_MSX) tmp/inc/resources.h
-	@echo -n "Compiling $< -> $@ ... $(@D)"
+	@echo $(MSG)
 	@mkdir -p $(@D)
 	@$(CCZ80) -c -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $< -o $@
-	@echo "Done!"
 
 tmp/%.lib: $(C_OBJ_MSX)
-	@echo -n "Linking $(OBJ_MSX) -> $@ ... "
+	@echo $(MSG)
 	@mkdir -p $(@D)
-	sdcclib $@ $(C_OBJ_MSX)
-	@echo "Done!"
+	@sdcclib $@ $(C_OBJ_MSX)
 
 tmp/%.ihx: $(ASM_OBJ_MSX) tmp/%.lib 
-	@echo -n "Linking $(ASM_OBJ_MSX) -> $@ ... "
+	@echo $(MSG)
 	@mkdir -p tmp
-	$(CCZ80) -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $(ASM_OBJ_MSX) tmp/skel.lib -o $@
-	@echo "Done!"
+	@$(CCZ80) -D MSX $(INCLUDES_MSX) $(CCFLAGS_MSX) $(ASM_OBJ_MSX) tmp/skel.lib -o $@
 
 bin/%.rom: tmp/%.ihx
-	@echo -n "Building $< -> $@ ... "
+	@echo $(MSG)
 	@$(HEXBIN) $< $(<:.ihx=.tmp)
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
-	@echo "Done!"
 	@echo ROM used: $$((`grep -m1 "CODE .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`*100/32768))% of 32K  $$((`grep -m1 "CODE .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`))
 	@echo RAM used: $$((`grep -m1 "DATA .*\. bytes "  tmp/skel.map | cut -c 64-70 | xargs`*100/16384))% of 16K
 
 msx1: bin/$(NAME).rom
+	@echo $(MSG)
 	@$(MSX1) $< || true
 
 ##########################################################
 ### LINUX SECTION
 
 bin/%.linux:  $(C_SOURCES_LINUX) $(HEADERS_LINUX) tmp/inc/resources.h
+	@echo $(MSG)
 	@mkdir -p $(@D)
 	$(CC) -g -D LINUX $(INCLUDES_LINUX) $(CCFLAGS_LINUX) $(C_SOURCES_LINUX) -lSDL2 -o $@ 
 
@@ -133,11 +131,12 @@ ALL_INCLUDES := $(shell for d in $(INCLUDE); do find -L $$d -type f -name \*.h -
 
 .PRECIOUS:bin/%
 bin/%: util/%.cc $(ALL_INCLUDES) $$(DEPS)
+	@echo $(MSG)
 	@mkdir -p $(@D)
-	@echo "\033[1;32m[$(@F)]\033[1;31m\033[12GFLAGS:\033[0m$(CUSTOM_FLAGS)"
 	@$(CXX) -o $@ $< $(shell echo $(COMMON_FLAGS) $(CUSTOM_FLAGS)) 
 
 %: util/%.cc bin/% 
+	@echo $(MSG)
 	@true
 
 clean:

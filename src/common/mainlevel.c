@@ -3,11 +3,7 @@
 extern void fillFrameBuffer(uint8_t tiles[24][128], uint8_t PNaddressH, uint16_t x, uint16_t y);
 
 extern T_f M0_menu();
-
-T_f L0_levelInit();
-T_f L1_levelMain();
-T_f L1_levelDeath();
-T_f L1_levelEnd();
+T_f L0_level();
 
 // Maximum map size: {16*8,4*8} 
 
@@ -19,6 +15,11 @@ typedef struct {
 	uint8_t tiles[24][128];
 } TMap;
 
+T_f L0_level() {
+	return (T_f)(M0_menu);
+}
+
+/*
 typedef struct {
 	
 	uint8_t enabled;
@@ -41,18 +42,6 @@ typedef struct {
 
 TLevelState levelState;
 
-T_f start() {
-
-	TMS9918_setRegister(7,BBlack+FWhite);
-	TMS9918_setMode2(FALSE);
-	
-	initHeadSprites(hairSprite, headSprite);
-	
-	
-	return (T_f)(M0_menu);
-}
-/*
- * 
 static void findFreeTiles(uint8_t freeTiles[256], const TMap *map) {
 	
 	{
@@ -78,115 +67,6 @@ static void findFreeTiles(uint8_t freeTiles[256], const TMap *map) {
 	}
 }
 
-
-T_f L0_levelInit() {
-	
-	TEntity *player = &levelState.entities[0];
-
-	TMS9918_setMode2(FALSE);
-	TMS9918_setRegister(7,BBlack+FWhite);
-
-	{
-		TMS9918Register TMS9918Status;
-		
-		TMS9918Status.reg[1] = 0;
-		
-		TMS9918Status.magnifySprites = 1;
-		TMS9918Status.sprites16 = 0;
-		TMS9918Status.blankScreen = 1;
-		TMS9918Status.generateInterrupts = 1;
-		TMS9918Status.mem416K = 1;
-	
-		TMS9918_setRegister(1,TMS9918Status.reg[1]);
-	}
-
-	TMS9918_activatePage0();
-
-	{
-		uint8_t c[8];
-		uint8_t i,j;
-		for (j=0; j<5; j++)
-			TMS9918_memcpy(ADDRESS_SG+(j<<3),&mySG[j][0],8);
-				
-
-		for (j=0; j<127; j++) {
-			for (i=0; i<8; i++)
-				c[i] = reverse8(mySG[j][i]);
-			TMS9918_memcpy(ADDRESS_SG+((128+j)<<3),&c[0],8);
-		}	
-	}
-
-	initTilemap();
-	
-	
-	
-	levelState.map.size.x=128;
-	levelState.map.size.y=24;
-
-	levelState.map.initPos.x=2;
-	levelState.map.initPos.y=2;
-	
-	levelState.map.pos.x=0x0000;
-	levelState.map.pos.y=0x0000;
-	
-	{
-		uint8_t i8;
-		for (i8=0; i8<32; i8++)
-			levelState.entities[i8].enabled = 0;
-	}
-	levelState.frameN = 0;
-	levelState.jumpReleased = 0;
-
-	player->enabled = 1;
-	player->type = T_PLAYER;
-	player->pos.x = 0x400;
-	player->pos.y = 0x400;
-	player->speed.x = 0x0;
-	player->speed.y = 0x80;
-	player->acc.x = 0x0;
-	player->acc.y = 0x0;
-	player->facing = 0x1;
-	player->state = ST_JUMP0;
-	player->step = 0;
-	player->hitbox.x = 0x20;
-	player->hitbox.y = 0x20;
-	player->hitbox.dx = 0xDF;
-	player->hitbox.dy = 0xDF;
-	
-	{
-
-
-		uint8_t i,j;
-		for (i=0; i<levelState.map.size.y; i++) {
-			for (j=0; j<levelState.map.size.x; j++) {
-				switch(mapInfo[i*128+j]) {
-				case 'a':
-					levelState.map.tiles[23-i][j] = 2;
-					break;
-				case 'b':
-					levelState.map.tiles[23-i][j] = 3;
-					break;
-				case '#':
-					levelState.map.tiles[23-i][j] = 1;
-					break;
-				default:
-					levelState.map.tiles[23-i][j] = 0;
-				}
-			}
-		}
-	}
-
-
-	{
-		uint8_t freeTiles[256];
-		findFreeTiles(freeTiles, &levelState.map);
-		initBloodMeterTiles(freeTiles);
-		initASCIITiles(' ', freeTiles);
-	}
-
-
-	return (T_f)(L1_levelMain);
-}
 
 int nFrame;
 int nSkipped;
@@ -214,6 +94,113 @@ static void drawStatusBar(uint8_t yCoord, uint16_t PNaddressH) {
 }
 
 T_f L1_levelMain() {
+	
+	{
+
+		TEntity *player = &levelState.entities[0];
+
+		TMS9918_setMode2(FALSE);
+		TMS9918_setRegister(7,BBlack+FWhite);
+
+		{
+			TMS9918Register TMS9918Status;
+			
+			TMS9918Status.reg[1] = 0;
+			
+			TMS9918Status.magnifySprites = 1;
+			TMS9918Status.sprites16 = 0;
+			TMS9918Status.blankScreen = 1;
+			TMS9918Status.generateInterrupts = 1;
+			TMS9918Status.mem416K = 1;
+		
+			TMS9918_setRegister(1,TMS9918Status.reg[1]);
+		}
+
+		TMS9918_activatePage0();
+
+		{
+			uint8_t c[8];
+			uint8_t i,j;
+			for (j=0; j<5; j++)
+				TMS9918_memcpy(ADDRESS_SG+(j<<3),&mySG[j][0],8);
+					
+
+			for (j=0; j<127; j++) {
+				for (i=0; i<8; i++)
+					c[i] = reverse8(mySG[j][i]);
+				TMS9918_memcpy(ADDRESS_SG+((128+j)<<3),&c[0],8);
+			}	
+		}
+
+		initTilemap();
+		
+		
+		
+		levelState.map.size.x=128;
+		levelState.map.size.y=24;
+
+		levelState.map.initPos.x=2;
+		levelState.map.initPos.y=2;
+		
+		levelState.map.pos.x=0x0000;
+		levelState.map.pos.y=0x0000;
+		
+		{
+			uint8_t i8;
+			for (i8=0; i8<32; i8++)
+				levelState.entities[i8].enabled = 0;
+		}
+		levelState.frameN = 0;
+		levelState.jumpReleased = 0;
+
+		player->enabled = 1;
+		player->type = T_PLAYER;
+		player->pos.x = 0x400;
+		player->pos.y = 0x400;
+		player->speed.x = 0x0;
+		player->speed.y = 0x80;
+		player->acc.x = 0x0;
+		player->acc.y = 0x0;
+		player->facing = 0x1;
+		player->state = ST_JUMP0;
+		player->step = 0;
+		player->hitbox.x = 0x20;
+		player->hitbox.y = 0x20;
+		player->hitbox.dx = 0xDF;
+		player->hitbox.dy = 0xDF;
+		
+		{
+
+
+			uint8_t i,j;
+			for (i=0; i<levelState.map.size.y; i++) {
+				for (j=0; j<levelState.map.size.x; j++) {
+					switch(mapInfo[i*128+j]) {
+					case 'a':
+						levelState.map.tiles[23-i][j] = 2;
+						break;
+					case 'b':
+						levelState.map.tiles[23-i][j] = 3;
+						break;
+					case '#':
+						levelState.map.tiles[23-i][j] = 1;
+						break;
+					default:
+						levelState.map.tiles[23-i][j] = 0;
+					}
+				}
+			}
+		}
+
+
+		{
+			uint8_t freeTiles[256];
+			findFreeTiles(freeTiles, &levelState.map);
+			initBloodMeterTiles(freeTiles);
+			initASCIITiles(' ', freeTiles);
+		}
+		
+	}
 
 	uint8_t x0,x1,y0,y1;
 	uint8_t x0r,x1r,y0r,y1r;
@@ -412,15 +399,5 @@ T_f L1_levelMain() {
 	TMS9918_setRegister(7,BBlack+FWhite);
 	
 	return (T_f)(L1_levelMain);
-}
-
-T_f L1_levelDeath() {
-
-	return (T_f)(M0_menu);
-}
-
-T_f L1_levelEnd() {
-
-	return (T_f)(M0_menu);
 }
 */
