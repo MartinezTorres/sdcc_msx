@@ -94,7 +94,6 @@ T_f M0_menu() {
 	TMsg MleftTriangle, MrightTriangle;
 	
 	int8_t selection = 0;
-	int16_t speed = 0;
 
 	{
 		uint8_t c;
@@ -234,33 +233,41 @@ T_f M0_menu() {
 			TMS9918_waitFrame();
 		}
 
-		while (SA[1].y < 200 && SA[3].y < 200) {
 
-			if (f&1) {
-				TMS9918Status.pn10 = ADDRESS_PN0 >> 10; 
-				TMS9918_writeRegister(2);
-			} else {
-				TMS9918Status.pn10 = ADDRESS_PN1 >> 10; 
-				TMS9918_writeRegister(2);
-			}
-			
-			f++;
+		{
 
-			updateHeads(SA, f, selection);
-			
-			if (selection!=1) {
-				SA[0].y += speed>>8;
-				SA[1].y += speed>>8;
-			}
-			if (selection!=0) {
-				SA[2].y += speed>>8;
-				SA[3].y += speed>>8;
-			}
-			
-			speed += 0x40;
+			int16_t speedFace=0, speedHair=0;
+			uint8_t tFall = 0;
+			while (SA[1].y < 200 && SA[3].y < 200) {
 
-			TMS9918_memcpy(ADDRESS_SA0,(uint8_t *)SA,32);
-			TMS9918_waitFrame();
+				if (f&1) {
+					TMS9918Status.pn10 = ADDRESS_PN0 >> 10; 
+					TMS9918_writeRegister(2);
+				} else {
+					TMS9918Status.pn10 = ADDRESS_PN1 >> 10; 
+					TMS9918_writeRegister(2);
+				}
+				
+				f++;
+				tFall++;
+
+				updateHeads(SA, f, selection);
+				
+				if (selection!=1) {
+					SA[0].y += speedHair>>8;
+					SA[1].y += speedFace>>8;
+				}
+				if (selection!=0) {
+					SA[2].y += speedHair>>8;
+					SA[3].y += speedFace>>8;
+				}
+				
+				if (tFall>3) speedHair+=0x40;
+				speedFace += 0x40;
+
+				TMS9918_memcpy(ADDRESS_SA0,(uint8_t *)SA,32);
+				TMS9918_waitFrame();
+			}
 		}
 	}
 //	return (T_f)(M0_menu);
