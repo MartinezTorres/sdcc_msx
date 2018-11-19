@@ -10,11 +10,6 @@
 # #                                                                                                                     X X X^ #
 # #                                                                                                                     X X X  #
 # #                                                                                                                     X X X  #
-# #                                                                                                                     X X X  #
-# #                                                                                                                     X X X  #
-# #                                                                                                                     X X X^ #
-# #                                                                                                                     X X X  #
-# #                                                                                                                     X X X  #
 # #                                                                                                                 <<  X X X  #
 # #                                                                                                               <<XX  X X X  #
 # #                                                                                                             <<XX   XX X X^ #
@@ -38,8 +33,8 @@
 # #                                                                         <<XX        X  X    X X X   XX>>    XX BX   X X X  #
 # #                                                                       <<XX    X  X              X     XX>>    XXX  XX X X^ #
 # #                                                                     <<X    X    X X   X  X  XX   X      XX>>        X X X  #
-# #                                                                   <<XX               X             X    B XX>>    XXX X    #
-# #                                                                 <<XX   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  X    #
+# #                                                                   <<XX               X             X    B XX>>    XXX X X  #
+# #                                                                 <<XX   XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX  X X  #
 #                                                                 <<XX      XX               XX                           X    #
 #                                                               <<XX                 XX                                  HX>><<#
 ################################################################################################################################
