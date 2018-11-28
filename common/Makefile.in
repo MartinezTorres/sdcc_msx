@@ -1,0 +1,122 @@
+ADDR_CODE = 0x4020
+CODE_SIZE = 0x7FDF
+ADDR_DATA = 0xC000
+DATA_SIZE = 0x3000
+
+MSG = "\033[1;32m[$(@F)]\033[1;31m\033[0m"
+
+CCZ80 = sdcc
+ASM = sdasz80
+OPENMSX = openmsx -machine C-BIOS_MSX2 -carta
+HEXBIN = makebin -s 65536
+
+INCLUDES = -Itmp/inc -Iinc -Icommon/inc
+
+#VERBOSE = -V
+#CCFLAGS_MSX   = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_MSX   = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-speed --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_LINUX =  -g -O0 -Wall -Wextra -Werror -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
+
+HEADERS       = $(wildcard inc/*.h) $(wildcard common/inc/*.h) $(wildcard tmp/inc/*.h) 
+SOURCES_C     = $(wildcard src/*.c) $(wildcard common/src/*.c) $(wildcard tmp/src/*.c)
+SOURCES_ASM   = $(wildcard src/*.s) $(wildcard common/src/*.s) $(wildcard tmp/src/*.s)
+
+.PHONY: all clean
+
+all: out/msx/$(NAME).rom out/linux/$(NAME)
+
+
+##########################################################
+### RESOURCE SECTION
+
+# GENERATE FONTS
+FONTS_SRC := $(wildcard common/res/fonts/*.png) $(wildcard res/fonts/*.png)
+FONTS_GEN := $(patsubst %.png, tmp/%.c, $(FONTS_SRC))
+SOURCES_C += $(FONTS_GEN)		
+.PHONY: fonts
+fonts: $(FONTS_GEN)
+	@true
+
+tmp/%.c: %.png tmp/common/util/mkFont
+	@#echo $(MSG)
+	@mkdir -p $(@D)
+	@tmp/common/util/mkFont $< > $@
+	@mkdir -p tmp/inc/$(<D)
+	@cproto -qve < $@ > tmp/inc/$*.h
+
+##########################################################
+### MSX SECTION
+OBJ_ASM    = $(addprefix tmp/,$(SOURCES_ASM:.s=.rel))
+OBJ_C      = $(addprefix tmp/,$(SOURCES_C:.c=.rel))
+
+.PRECIOUS: tmp/%.ihx $(OBJ_ASM) $(OBJ_C) tmp/%.lib 
+
+tmp/%.rel: %.s $(HEADERS)
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@cd tmp && $(ASM) -o ../$@ ../$<
+
+tmp/%.rel: %.c $(HEADERS)
+	@echo -n $(MSG)
+	@mkdir -p $(@D)
+	@$(CCZ80) -c -D MSX $(INCLUDES) $(CCFLAGS_MSX) $< -o $@
+	@echo " "`grep "size" tmp/$*.sym | awk 'strtonum("0x"$$4) {print $$2": "strtonum("0x"$$4)" bytes"}'` 
+
+
+tmp/%.lib: $(OBJ_C)
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@sdcclib $@ $(OBJ_C)
+
+tmp/%.ihx: $(OBJ_ASM) tmp/%.lib 
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(CCZ80) -D MSX $(INCLUDES) $(CCFLAGS_MSX) $(OBJ_ASM) tmp/$(NAME).lib -o $@
+
+out/msx/%.rom: tmp/%.ihx
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(HEXBIN) $< $(<:.ihx=.tmp)
+	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
+	@grep ".*\. bytes " tmp/$(NAME).map | awk '{val=strtonum("0x"$$3); if (val>2) printf "%12s: %6d bytes (%6.2f KiB)\n", $$1, val, val/1024}'
+
+msx: out/msx/$(NAME).rom
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(OPENMSX) $< || true
+
+##########################################################
+### LINUX SECTION
+
+out/linux/%: $(SOURCES_C) $(HEADERS)
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(CC) -g -D LINUX $(INCLUDES) $(CCFLAGS_LINUX) $(SOURCES_C) -lSDL2 -o $@ 
+
+run: out/linux/$(NAME)
+	@./$<
+
+gdb: out/linux/$(NAME)
+	@gdb ./$< --ex run
+
+
+##########################################################
+### UTILITIES SECTION
+
+INCLUDE := util
+.PRECIOUS:tmp/%
+tmp/%: %.cc
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(CXX) -o $@ $< $(CCFLAGS_LINUX) $(shell echo `grep -m1 "^// FLAGS:" $< | cut -d: -f2-`)
+
+%: util/%.cc bin/% 
+	@echo $(MSG)
+	@true
+
+
+
+clean:
+	@echo -n "Cleaning... "
+	@rm -rf tmp out
+	@echo "Done!"

@@ -4,7 +4,7 @@ Environment for mixed development linux/msx in C and assembler.
 
 Our idea is to develop the core engine of a msx game in C within linux, allowing rapid prototyping thanks to gcc, gdb, printfs, etc...
 
-To be able to compile a msx1 looking game in linux, we include a minimal implementation of the tms9918a for linux, and we might add other devices as needed.
+To be able to compile a msx looking game in linux, we include a minimal implementation of the tms9918a for linux, and we might add other devices as needed.
 
 Our idea is to share most of the code between linux and msx targets.
 While the parts unique to msx and linux should be placed in their respective folders.
@@ -27,8 +27,6 @@ make gdb-linux-hello <- builds the linux version of the hello world and runs it 
 ## Extensions
 ```
 .c <- compiled for all targets
-.z80.c <- only compiled using sdcc
-.gcc.c <- only compiled using gcc
 .s <- assembled using sdasz80
 ```
 
@@ -38,19 +36,11 @@ make gdb-linux-hello <- builds the linux version of the hello world and runs it 
 bin/target/exec  ;Here go the binaries and the rom
 doc              ;Here we have handy documents for the development of the MSX
 lib/       
-lib/msx1
-lib/msx1/disk
-lib/msx1/rom     
+lib/msx
 
-res/
-res/game/
-res/game/
-
-
-
-src/common       ;Common source code (.c and .h) for both pc and msx
-src/msx    ;Source code (.c, .h, and .s) for the msx
-src/linux  ;Source code (.c, .h) for the linux port
+game/name/src       ;Common source code (.c and .h) for both pc and msx
+game/name/res       ;Resources for a game
+	
 tmp        ;Folder for the temporal files
 ```
 

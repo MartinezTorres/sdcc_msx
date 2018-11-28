@@ -1,0 +1,24 @@
+Building C-BIOS From Source
+===========================
+
+First, get a Z80 assembler. Currently, only the following assembler can build
+C-BIOS without requiring modifications to the source code:
+  * Pasmo 0.5.3 -  http://pasmo.speccy.org/
+It is available for Windows, Linux and probably on other Unix-like systems as
+well.
+
+Building with Pasmo:
+On Unix-like systems: Run "make". You should have GNU Make or something similar
+enough installed on your machine.
+On Windows: Run "make.bat" like this: "make pasmo".
+
+The produced ROM files are located in the directory "derived/bin", which will
+be automatically created. You can find symbol listings in "derived/lst", they
+are useful for debugging.
+
+To test C-BIOS, you can use the supplied emulator configurations in the
+"configs" directory.
+
+If you have made interesting improvements to C-BIOS, please tell us about them.
+
+http://cbios.sourceforge.net/
