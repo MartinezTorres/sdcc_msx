@@ -10,8 +10,9 @@
 #include <tms9918.h>
 
 typedef struct { uint8_t r,g,b; } RGB;
-static RGB framebuffer   [TEX_HEIGHT][TEX_WIDTH];
-static RGB framebufferOld[TEX_HEIGHT][TEX_WIDTH];
+static RGB framebuffer     [TEX_HEIGHT][TEX_WIDTH];
+static RGB framebufferOld  [TEX_HEIGHT][TEX_WIDTH];
+static RGB framebufferMixed[TEX_HEIGHT][TEX_WIDTH];
 
 static const RGB colors[16] = {
 {   0,    0,    0},
@@ -114,6 +115,7 @@ static inline void drawScreen() {
 	for (int i=0; i<TEX_HEIGHT; i++)
 		for (int j=0; j<TEX_WIDTH; j++)
 			framebuffer[i][j] = colors[TMS9918Status.backdrop];
+	return;
 			
 	if (! TMS9918Status.blankScreen) return;
 
@@ -134,42 +136,44 @@ static inline void drawScreen() {
 ////////////////////////////////////////////////////////////////////////
 // IO FUNCTIONS
 
-static bool keys[8831];
+#define N_KEYS  8831
+static bool keys[N_KEYS];
+
 static inline void keyboard_init(void) {
-	memset(keys, 0, sizeof(keys));
+	memset(keys, 0, N_KEYS);
 }
 
 static inline void keyboard_update(SDL_Event e) {
 	switch( e.type ){
 	case SDL_KEYDOWN:
 		//printf("KEY PRESSED: %d\n",e.key.keysym.sym);
-		keys[e.key.keysym.sym%sizeof(keys)] = true;
+		keys[e.key.keysym.sym%N_KEYS] = true;
 		break;
 	case SDL_KEYUP:
 		//printf("KEY RELEASED: %d\n",e.key.keysym.sym);
-		keys[e.key.keysym.sym%sizeof(keys)] = false;
+		keys[e.key.keysym.sym%N_KEYS] = false;
 		break;
 	default:
 		break;
 	}
 }
 
-uint8_t joystick_read(uint8_t joystickId) { 
+uint8_t msxhal_joystick_read(uint8_t joystickId) { 
 	
 	uint8_t joystickStatus[2];
 	
 	joystickStatus[0] = 0;
 	joystickStatus[1] = 0;
 	
-	if (keys[SDLK_RIGHT %sizeof(keys)]) joystickStatus[0] += J_RIGHT;
-	if (keys[SDLK_DOWN  %sizeof(keys)]) joystickStatus[0] += J_DOWN;
-	if (keys[SDLK_UP    %sizeof(keys)]) joystickStatus[0] += J_UP;
-	if (keys[SDLK_LEFT  %sizeof(keys)]) joystickStatus[0] += J_LEFT;
-	if (keys[SDLK_DELETE%sizeof(keys)]) joystickStatus[0] += J_DEL;
-	if (keys[SDLK_INSERT%sizeof(keys)]) joystickStatus[0] += J_INS;
-	if (keys[SDLK_HOME  %sizeof(keys)]) joystickStatus[0] += J_HOME;
-	if (keys[SDLK_SPACE %sizeof(keys)]) joystickStatus[0] += J_SPACE;
-	
+	if (keys[SDLK_RIGHT % N_KEYS]) joystickStatus[0] += J_RIGHT;
+	if (keys[SDLK_DOWN  % N_KEYS]) joystickStatus[0] += J_DOWN;
+	if (keys[SDLK_UP    % N_KEYS]) joystickStatus[0] += J_UP;
+	if (keys[SDLK_LEFT  % N_KEYS]) joystickStatus[0] += J_LEFT;
+	if (keys[SDLK_DELETE% N_KEYS]) joystickStatus[0] += J_DEL;
+	if (keys[SDLK_INSERT% N_KEYS]) joystickStatus[0] += J_INS;
+	if (keys[SDLK_HOME  % N_KEYS]) joystickStatus[0] += J_HOME;
+	if (keys[SDLK_SPACE % N_KEYS]) joystickStatus[0] += J_SPACE;
+
 	return joystickStatus[joystickId]; 	
 }
 
@@ -212,8 +216,7 @@ static inline int8_t initSDL() {
     return 0;
 }
 
-static RGB framebufferMixed[TEX_HEIGHT][TEX_WIDTH];
-static inline int8_t displayFramebufferSDL() {
+static int8_t displayFramebufferSDL() {
 	
 	
 		// clear screen
@@ -227,9 +230,9 @@ static inline int8_t displayFramebufferSDL() {
 		
 		for (int i=0; i<TEX_HEIGHT; i++) {
 			for (int j=0; j<TEX_WIDTH; j++) {
-				framebufferMixed[i][j].r = (framebuffer[i][j].r + framebufferOld[i][j].r)/2;
-				framebufferMixed[i][j].g = (framebuffer[i][j].g + framebufferOld[i][j].g)/2;
-				framebufferMixed[i][j].b = (framebuffer[i][j].b + framebufferOld[i][j].b)/2;
+				framebufferMixed[i][j].r = (uint8_t)((framebuffer[i][j].r + framebufferOld[i][j].r)/2);
+				framebufferMixed[i][j].g = (uint8_t)((framebuffer[i][j].g + framebufferOld[i][j].g)/2);
+				framebufferMixed[i][j].b = (uint8_t)((framebuffer[i][j].b + framebufferOld[i][j].b)/2);
 				framebufferOld[i][j] = framebuffer[i][j];
 			}
 		}
@@ -259,7 +262,7 @@ static inline void closeSDL() {
 }
 
 
-void init() {
+void msxhal_init() {
 	
 	if (initSDL()<0) {
 		printf("Failed to initialize SDL!\n");
@@ -269,9 +272,11 @@ void init() {
 	keyboard_init();
 	
 	SDL_is_initialized = true;
+	
 }
 
 void wait_frame() {
+
 	
 	if (!SDL_is_initialized) {
 		printf("wait_frame called before init()\n");

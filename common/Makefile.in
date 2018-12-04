@@ -7,6 +7,7 @@ MSG = "\033[1;32m[$(@F)]\033[1;31m\033[0m"
 
 CCZ80 = sdcc
 ASM = sdasz80
+#OPENMSX = openmsx -machine C-BIOS_MSX2 -carta
 OPENMSX = openmsx -machine C-BIOS_MSX2 -carta
 HEXBIN = makebin -s 65536
 
@@ -14,8 +15,8 @@ INCLUDES = -Itmp/inc -Iinc -Icommon/inc
 
 #VERBOSE = -V
 #CCFLAGS_MSX   = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
-CCFLAGS_MSX   = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-speed --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
-CCFLAGS_LINUX =  -g -O0 -Wall -Wextra -Werror -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
+CCFLAGS_MSX   = --std-c99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-speed --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_LINUX =  -g -O0 -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
 HEADERS       = $(wildcard inc/*.h) $(wildcard common/inc/*.h) $(wildcard tmp/inc/*.h) 
 SOURCES_C     = $(wildcard src/*.c) $(wildcard common/src/*.c) $(wildcard tmp/src/*.c)
@@ -44,14 +45,28 @@ tmp/%.c: %.png tmp/common/util/mkFont
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < $@ > tmp/inc/$*.h
 
+# GENERATE BINARIES
+BINARIES_SRC += $(shell find res/ -type f -name '*.afb')
+BINARIES_SRC += $(shell find res/ -type f -name '*.afx')
+BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
+HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
+SOURCES_C += $(BINARIES_GEN)
+
+tmp/inc/%.h: % tmp/common/util/mkBinary
+	@echo $(MSG)
+	@mkdir -p tmp/$(<D)
+	@tmp/common/util/mkBinary $< > tmp/$*.c
+	@mkdir -p tmp/inc/$(<D)
+	@cproto -qve < tmp/$*.c > tmp/inc/$*.h
+
 ##########################################################
 ### MSX SECTION
 OBJ_ASM    = $(addprefix tmp/,$(SOURCES_ASM:.s=.rel))
 OBJ_C      = $(addprefix tmp/,$(SOURCES_C:.c=.rel))
 
-.PRECIOUS: tmp/%.ihx $(OBJ_ASM) $(OBJ_C) tmp/%.lib 
+.PRECIOUS: tmp/%.ihx $(OBJ_ASM) $(OBJ_C) tmp/%.lib $(SOURCES_C) $(HEADERS)
 
-tmp/%.rel: %.s $(HEADERS)
+tmp/%.rel: %.s $(HEADERS) 
 	@echo $(MSG)
 	@mkdir -p $(@D)
 	@cd tmp && $(ASM) -o ../$@ ../$<
