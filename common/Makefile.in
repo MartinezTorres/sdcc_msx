@@ -1,4 +1,5 @@
-ADDR_CODE = 0x4020
+ADDR_CODE  = 0x4020
+ADDR_CONST = -Wl-b_bank_1=0xA000 -Wl-b_bank_2=0xA000
 CODE_SIZE = 0x7FDF
 ADDR_DATA = 0xC000
 DATA_SIZE = 0x3000
@@ -15,7 +16,7 @@ INCLUDES = -Itmp/inc -Iinc -Icommon/inc
 
 #VERBOSE = -V
 #CCFLAGS_MSX   = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
-CCFLAGS_MSX   = --std-c99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-speed --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_MSX   = --disable-warning 126 --std-c99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-speed --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
 CCFLAGS_LINUX =  -g -O0 -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
 HEADERS       = $(wildcard inc/*.h) $(wildcard common/inc/*.h) $(wildcard tmp/inc/*.h) 
@@ -48,6 +49,7 @@ tmp/%.c: %.png tmp/common/util/mkFont
 # GENERATE BINARIES
 BINARIES_SRC += $(shell find res/ -type f -name '*.afb')
 BINARIES_SRC += $(shell find res/ -type f -name '*.afx')
+
 BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
 HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
 SOURCES_C += $(BINARIES_GEN)

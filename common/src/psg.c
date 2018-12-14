@@ -4,12 +4,8 @@ T_AY_3_8910_Registers AY_3_8910_Registers;
 
 void PSG_initRegisters() {
 	
-	register int i=13;
-	do {
-		AY_3_8910_Registers.reg[i]=0;
-	} while (i--);
+	ZERO(AY_3_8910_Registers,14);
 }
-
 
 #ifdef MSX
 	__sfr __at 0xA0 PSG0;
@@ -52,6 +48,7 @@ __LOUT:		OUT (C),A
 	}
 
 #else
+
 	void PSG_syncRegisters() {}
 #endif
 
@@ -233,6 +230,7 @@ void ayFX_spin() {
 		
 		AY_3_8910_Registers.enable.value |= (flags.value & 0x90) >> (4-channel);
 	}
+	
 }
 
 

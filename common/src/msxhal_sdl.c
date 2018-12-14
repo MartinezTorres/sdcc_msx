@@ -188,7 +188,43 @@ static SDL_Window* gWindow = nullptr;
 static SDL_Renderer* gRenderer = nullptr;
 static SDL_Texture* tex = nullptr;
 
+
+#include <ay8912.h>
+#include <psg.h>
+ayemu_ay_t ay;
+static void fill_audio(void *reg, uint8_t *stream, int len) {
+	
+	ayemu_set_regs  (&ay, reg);
+	ayemu_gen_sound (&ay, stream, len);
+	
+}
+
 static inline int8_t initSDL() {
+	
+	SDL_AudioSpec wanted;
+
+	wanted.freq = 44100;
+	wanted.format = AUDIO_S16;
+	wanted.channels = 1;
+	wanted.samples = 2*44100/60;
+	wanted.callback = fill_audio;
+	wanted.userdata = &AY_3_8910_Registers.reg;
+
+	if (SDL_OpenAudio(&wanted, NULL) < 0) {
+		fprintf(stderr, "Couldn't open audio: %s\n", SDL_GetError());
+		return -1;
+	}
+
+	ayemu_init(&ay);
+	ayemu_set_sound_format(&ay, wanted.freq, wanted.channels, 16);
+	ayemu_reset(&ay);
+	ayemu_set_chip_type(&ay, AYEMU_AY, NULL);
+	ayemu_set_chip_freq(&ay, AYEMU_DEFAULT_CHIP_FREQ);
+//	ayemu_set_stereo(&ay, AYEMU_MONO, NULL);
+	ayemu_set_stereo(&ay, AYEMU_ABC, NULL);
+	
+	SDL_PauseAudio(0);
+
 	    
     // Intialize SDL
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
