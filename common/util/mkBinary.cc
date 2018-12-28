@@ -19,9 +19,9 @@ int main(int argc, char *argv[]) {
 	std::ifstream iff(argv[1]);
 	
 	std::string name = argv[1];
-	name = name.substr(name.rfind('/')+1);
-	for (auto &&c : name)
-		if (c=='.') c = '_';
+	for (auto &&s : "_!-+/\\.'() ")
+		for (auto &&c : name)
+			if (c==s) c = '_';
 	
 
 	std::cout << "// Binary file generated from:" << argv[1] << std::endl;

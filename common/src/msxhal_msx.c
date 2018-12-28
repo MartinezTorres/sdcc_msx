@@ -2,6 +2,8 @@
 
 #ifdef MSX
 
+volatile uint8_t current_code_segment;
+volatile uint8_t current_data_segment;
 
 static void (*custom_isr)(void);
 void msx_hal_isr(void) { 
@@ -38,6 +40,18 @@ void msxhal_init() {
 		push ix
 		ld ix,#0
 		add ix,sp
+		
+		ld A,#0x00
+		ld (#0x5000),A ; // Konami5 mapper init
+
+		inc A
+		ld (#0x7000),A ; // Konami5 mapper init
+
+		inc A
+		ld (#0x9000),A ; // Konami5 mapper init
+
+		inc A
+		ld (#0xB000),A ; // Konami5 mapper init
 
 		; Set new ISR vector
 		ld A,#0xC3 ; opcode for JP

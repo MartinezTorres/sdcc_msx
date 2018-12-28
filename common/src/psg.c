@@ -52,6 +52,114 @@ __LOUT:		OUT (C),A
 	void PSG_syncRegisters() {}
 #endif
 
+////////////////////////////////////////////////////////////////////////
+// AYR PLAYER
+static const uint16_t midi2ay[] = {
+	0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 
+	0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFFF, 0xFE4, 0xEFF, 0xE28, 0xD5C, 0xC9D, 0xBE7, 0xB3C, 0xA9B, 0xA02, 0x973, 0x8EB, 
+	0x86B, 0x7F2, 0x780, 0x714, 0x6AE, 0x64E, 0x5F4, 0x59E, 0x54D, 0x501, 0x4B9, 0x475, 0x435, 0x3F9, 0x3C0, 0x38A, 
+	0x357, 0x327, 0x2FA, 0x2CF, 0x2A7, 0x281, 0x25D, 0x23B, 0x21B, 0x1FC, 0x1E0, 0x1C5, 0x1AC, 0x194, 0x17D, 0x168, 
+	0x153, 0x140, 0x12E, 0x11D, 0x10D, 0x0FE, 0x0F0, 0x0E2, 0x0D6, 0x0CA, 0x0BE, 0x0B4, 0x0AA, 0x0A0, 0x097, 0x08F, 
+	0x087, 0x07F, 0x078, 0x071, 0x06B, 0x065, 0x05F, 0x05A, 0x055, 0x050, 0x04C, 0x047, 0x043, 0x040, 0x03C, 0x039, 
+	0x035, 0x032, 0x030, 0x02D, 0x02A, 0x028, 0x026, 0x024, 0x022, 0x020, 0x01E, 0x01C, 0x01B, 0x019, 0x018, 0x016, 
+	0x015, 0x014, 0x013, 0x012, 0x011, 0x010, 0x00F, 0x00E, 0x00D, 0x00D, 0x00C, 0x00B, 0x00B, 0x00A, 0x009, 0x009 };
+
+typedef struct {
+	
+	uint8_t segment;
+	uint8_t duration[3];
+	const uint8_t *channels[3];
+} T_AYR_Status;
+
+static T_AY_3_8910_Registers ayr_registers;
+static T_AYR_Status ayr_status;
+
+void ayr_play(const AYR *ayr, uint8_t segment) {
+	
+	uint8_t old_data_segment = load_data_segment(segment);
+	
+	ZERO(ayr_registers,14);
+	
+	ayr_status.segment = segment;
+	
+	ayr_status.duration[0] = 1;
+	ayr_status.duration[1] = 1;
+	ayr_status.duration[2] = 1;
+
+	ayr_status.channels[0] = ayr->channels[0];
+	ayr_status.channels[1] = ayr->channels[1];
+	ayr_status.channels[2] = ayr->channels[2];
+
+	restore_data_segment(old_data_segment);
+}
+
+void ayr_spin() {
+	
+	
+	uint8_t old_data_segment = load_data_segment(ayr_status.segment);
+	uint8_t i;
+
+	for (i=0; i<3; i++) {
+		uint8_t meta;
+		if (--ayr_status.duration[i]) continue;
+		
+		meta = *ayr_status.channels[i]++;
+		
+		if ( !!(meta & 0x80) ) {
+			
+			uint8_t tone = *ayr_status.channels[i]++;
+			if (tone) {
+				ayr_registers.tone[i] = midi2ay[tone];
+				switch (i) {
+				case 0:
+					ayr_registers.enable.tone_a  = 0;
+					ayr_registers.enable.noise_a = 1;
+					break;
+				case 1:
+					ayr_registers.enable.tone_b  = 0;
+					ayr_registers.enable.noise_b = 1;
+					break;
+				case 2:
+				default:
+					ayr_registers.enable.tone_c  = 0;
+					ayr_registers.enable.noise_c = 1;
+					break;
+				
+				}
+			} else {
+				switch (i) {
+				case 0:
+					ayr_registers.enable.tone_a  = 1;
+					ayr_registers.enable.noise_a = 0;
+					break;
+				case 1:
+					ayr_registers.enable.tone_b  = 1;
+					ayr_registers.enable.noise_b = 0;
+					break;
+				case 2:
+				default:
+					ayr_registers.enable.tone_c  = 1;
+					ayr_registers.enable.noise_c = 0;
+					break;
+				}				
+			}
+		}
+
+		ayr_registers.amplitude[i].volume = meta & 0x0F;
+		
+		{
+			uint8_t duration = (meta&0x70)>>4;
+			if ( duration == 0x07 )
+				duration = *ayr_status.channels[i]++;
+			ayr_status.duration[i] = duration;
+		}
+	}
+
+	for (i=0; i<14; i++)
+		AY_3_8910_Registers.reg[i] = ayr_registers.reg[i];
+		
+	restore_data_segment(old_data_segment);
+}
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -100,6 +208,8 @@ typedef struct {
 	uint8_t noise;
 	uint8_t priority;
 	int8_t adjustedVolume;
+	uint8_t segment;
+
 } T_ayFX_Effect;
 
 #define AYFX_MAX_EFFECTS 8
@@ -125,7 +235,8 @@ void ayFX_init() {
 	}
 }
 
-static inline T_ayFX_Effect *ayFX_effect(uint8_t idx) {
+
+INLINE T_ayFX_Effect *ayFX_effect(uint8_t idx) {
 	
 	return &ayFX_status.effects[ayFX_status.sortedEffects[idx]];
 }
@@ -140,9 +251,9 @@ static void ayFX_remove(uint8_t idx) {
 }
 
 
-void ayFX_afx(const uint8_t *afx, uint8_t priority, int8_t adjustedVolume) {
+void ayFX_afx(const uint8_t *afx, uint8_t segment, uint8_t priority, int8_t adjustedVolume) {
 	
-
+	
 	uint8_t idx = ayFX_status.nEffects;
 
 	if (idx==AYFX_MAX_EFFECTS) {
@@ -155,6 +266,7 @@ void ayFX_afx(const uint8_t *afx, uint8_t priority, int8_t adjustedVolume) {
 	ayFX_effect(idx)->afx = afx;
 	ayFX_effect(idx)->priority = priority;
 	ayFX_effect(idx)->adjustedVolume = adjustedVolume;
+	ayFX_effect(idx)->segment = segment;
 	
 	while (idx>0 && ayFX_effect(idx-1)->priority <= ayFX_effect(idx)->priority) {
 		swap(uint8_t,ayFX_status.sortedEffects[idx-1], ayFX_status.sortedEffects[idx]);
@@ -162,10 +274,14 @@ void ayFX_afx(const uint8_t *afx, uint8_t priority, int8_t adjustedVolume) {
 	}
 }
 
-void ayFX_afb(const uint8_t *afb, uint8_t idx, uint8_t priority, int8_t adjustedVolume) {
+void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority, int8_t adjustedVolume) {
 	
+	uint8_t old_data_segment = load_data_segment(segment);
+
 	const uint16_t *afxTable = (const uint16_t *)(afb+1);
-	ayFX_afx((const uint8_t *)&afxTable[idx] + 2 + afxTable[idx], priority, adjustedVolume);
+	ayFX_afx((const uint8_t *)&afxTable[idx] + 2 + afxTable[idx], segment, priority, adjustedVolume);
+
+	restore_data_segment(old_data_segment);
 }
 
 void ayFX_spin() {
@@ -181,6 +297,7 @@ void ayFX_spin() {
 	while (idx<ayFX_status.nEffects) {		
 		
 		T_ayFX_Effect *effect = ayFX_effect(idx++);
+		uint8_t old_data_segment = load_data_segment(effect->segment);
 		int8_t volume;
 		T_ayFX_Flags flags;
 		flags.value = *effect->afx++;
@@ -229,8 +346,9 @@ void ayFX_spin() {
 		}
 		
 		AY_3_8910_Registers.enable.value |= (flags.value & 0x90) >> (4-channel);
+		restore_data_segment(old_data_segment);
 	}
-	
+
 }
 
 

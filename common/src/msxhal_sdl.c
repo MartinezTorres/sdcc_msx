@@ -311,6 +311,13 @@ void msxhal_init() {
 	
 }
 
+static void (*custom_isr)(void);
+void msxhal_install_isr(void (*new_isr)(void)) {
+	
+	custom_isr = new_isr;
+}
+
+
 void wait_frame() {
 
 	
@@ -318,6 +325,9 @@ void wait_frame() {
 		printf("wait_frame called before init()\n");
 		exit(-1);
 	}
+
+	if (custom_isr != nullptr)
+		(*custom_isr)();
 
 	SDL_Event e;
 	// handle event on queue

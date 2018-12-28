@@ -1,23 +1,27 @@
-ADDR_CODE  = 0x4020
-ADDR_CONST = -Wl-b_bank_1=0xA000 -Wl-b_bank_2=0xA000
+#MEGAROM STRUCTURE:
+#0x4000-0x6000 -> Always block 0
+#0x6000-0x8000 -> Always block 1
+#0x8000-0xA000 -> Code segment
+#0xA000-0xC000 -> Const Data segment
+
+
+ADDR_CODE = 0x4020
 CODE_SIZE = 0x7FDF
 ADDR_DATA = 0xC000
 DATA_SIZE = 0x3000
 
-MSG = "\033[1;32m[$(@F)]\033[1;31m\033[0m"
+MSG = "\033[1;32m[$(@)]\033[1;31m\033[0m"
 
 CCZ80 = sdcc
 ASM = sdasz80
-#OPENMSX = openmsx -machine C-BIOS_MSX2 -carta
 OPENMSX = openmsx -machine C-BIOS_MSX2 -carta
-HEXBIN = makebin -s 65536
+HEXBIN = makebin -s 4194304
 
 INCLUDES = -Itmp/inc -Iinc -Icommon/inc
 
 #VERBOSE = -V
-#CCFLAGS_MSX   = $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-size --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
-CCFLAGS_MSX   = --disable-warning 126 --std-c99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --opt-code-speed --fomit-frame-pointer --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
-CCFLAGS_LINUX =  -g -O0 -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Winline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
+CCFLAGS_MSX   = --disable-warning 126 --std-c99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node 1000 --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_LINUX =  -g -O1 -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Wno-inline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
 HEADERS       = $(wildcard inc/*.h) $(wildcard common/inc/*.h) $(wildcard tmp/inc/*.h) 
 SOURCES_C     = $(wildcard src/*.c) $(wildcard common/src/*.c) $(wildcard tmp/src/*.c)
@@ -30,6 +34,9 @@ all: out/msx/$(NAME).rom out/linux/$(NAME)
 
 ##########################################################
 ### RESOURCE SECTION
+# Might be useful:
+# remove spaces: find res -name "* *" -type f | rename 's/ /_/g'
+# to lowercase: find res -depth -exec rename 's/(.*)\/([^\/]*)/$1\/\L$2/' {} \;
 
 # GENERATE FONTS
 FONTS_SRC := $(wildcard common/res/fonts/*.png) $(wildcard res/fonts/*.png)
@@ -49,17 +56,26 @@ tmp/%.c: %.png tmp/common/util/mkFont
 # GENERATE BINARIES
 BINARIES_SRC += $(shell find res/ -type f -name '*.afb')
 BINARIES_SRC += $(shell find res/ -type f -name '*.afx')
+BINARIES_SRC += $(shell find res/ -type f -name '*.mid')
 
 BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
 HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
-SOURCES_C += $(BINARIES_GEN)
+SOURCES_C    += $(BINARIES_GEN)
 
-tmp/inc/%.h: % tmp/common/util/mkBinary
+tmp/inc/%.mid.h: %.mid tmp/common/util/mkMidi
 	@echo $(MSG)
 	@mkdir -p tmp/$(<D)
-	@tmp/common/util/mkBinary $< > tmp/$*.c
+	@tmp/common/util/mkMidi -fps=60 $< tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
-	@cproto -qve < tmp/$*.c > tmp/inc/$*.h
+	@cproto -qve < tmp/$<.c > $@
+
+tmp/inc/%.h: % tmp/common/util/mkBinary tmp/common/util/mkMidi
+	@echo $(MSG)
+	@mkdir -p tmp/$(<D)
+	@tmp/common/util/mkBinary $< > tmp/$<.c
+	@mkdir -p tmp/inc/$(<D)
+	@cproto -qve < tmp/$<.c > $@
+
 
 ##########################################################
 ### MSX SECTION
@@ -90,12 +106,17 @@ tmp/%.ihx: $(OBJ_ASM) tmp/%.lib
 	@mkdir -p $(@D)
 	@$(CCZ80) -D MSX $(INCLUDES) $(CCFLAGS_MSX) $(OBJ_ASM) tmp/$(NAME).lib -o $@
 
-out/msx/%.rom: tmp/%.ihx
+out/msx/%.rom.old: tmp/%.ihx
 	@echo $(MSG)
 	@mkdir -p $(@D)
 	@$(HEXBIN) $< $(<:.ihx=.tmp)
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
 	@grep ".*\. bytes " tmp/$(NAME).map | awk '{val=strtonum("0x"$$3); if (val>2) printf "%12s: %6d bytes (%6.2f KiB)\n", $$1, val, val/1024}'
+
+out/msx/%.rom: tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM)
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM) $@
 
 msx: out/msx/$(NAME).rom
 	@echo $(MSG)

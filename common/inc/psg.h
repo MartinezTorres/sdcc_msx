@@ -55,7 +55,13 @@ void PSG_initRegisters();
 void PSG_syncRegisters();
 
 void ayFX_init();
-void ayFX_afx(const uint8_t *afx, uint8_t priority, int8_t adjustedVolume);
-void ayFX_afb(const uint8_t *afb, uint8_t idx, uint8_t priority, int8_t adjustedVolume);
+void ayFX_afx(const uint8_t *afx, uint8_t segment, uint8_t priority, int8_t adjustedVolume);
+void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority, int8_t adjustedVolume);
 void ayFX_spin();
+
+typedef struct { const uint8_t *channels[3]; uint16_t fames; } AYR;
+
+void ayr_play(const AYR *ayr, uint8_t segment);
+void ayr_spin();
+
 

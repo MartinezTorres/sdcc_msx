@@ -2,22 +2,46 @@
 #include <tms9918.h>
 #include <psg.h>
 
+
 #include <res/ayfx/inicio_juego.afb.h>
 
-extern const char str1[];
-extern const char str2[];
+#include <res/midi/indy4/theme_and_opening_credits.mid.h>
+#include <res/midi/chopin/chpn_op10_e01.mid.h>
 
-int main(void) {
+USING(res_midi_chopin_chpn_op10_e01_mid);
+USING(res_ayfx_inicio_juego_afb);
+USING(psg);
+
+void audio_isr();
+
+void audio_isr() {
     
+    uint8_t oldCodeSegment = load_code_segment(SEGMENT(psg));
+
+    TMS9918_setRegister(7,0x77);
+    ayr_spin();
+    TMS9918_setRegister(7,0x44);
+
+    TMS9918_setRegister(7,0x88);
+    ayFX_spin();
+    TMS9918_setRegister(7,0x44);
+    
+    PSG_syncRegisters();
+    TMS9918_setRegister(7,0x55);
+
+    restore_code_segment(oldCodeSegment);    
+    TMS9918_setRegister(7,0);    
+}
+
+INLINE int start() {
+
     bool released = true;
+    uint8_t bd = 0x34;
     
-    uint8_t bd = 0x34 + str1[1] + str2[2];
-    msxhal_init();
-    ayFX_init();
-    TMS9918_activateMode2(false);
 
+    TMS9918_activateMode2(false);
     
-    
+	//asdff();
 
     while (true) {
 	
@@ -25,7 +49,9 @@ int main(void) {
 	
 	if (key!=0 && released) {
 	    
-	    ayFX_afb(inicio_juego_afb,key>>4,15,0);
+	    uint8_t oldCodeSegment = load_code_segment(SEGMENT(psg));
+	    ayFX_afb(res_ayfx_inicio_juego_afb,SEGMENT(res_ayfx_inicio_juego_afb),key>>4,15,0);
+	    restore_code_segment(oldCodeSegment);    
 	    
 	    bd = bd + 0x11;
 	    bd = bd & 0x33;
@@ -34,21 +60,24 @@ int main(void) {
 	released = (key==0);
 	
 	HALT();
-	DI();
-	TMS9918_setRegister(7,0x77);
-	PSG_initRegisters();
-	TMS9918_setRegister(7,0x88);
-	ayFX_spin();
-	TMS9918_setRegister(7,0x44);
-	PSG_syncRegisters();
-	TMS9918_setRegister(7,0);
-	EI();
-	
     };
+
 }
 
-//static void __placeholder() {
-//    __asm__(".area _CODE1");
-//}
+int main(void) {
+
+    uint8_t oldCodeSegment = load_code_segment(SEGMENT(psg));
+
+    msxhal_init();
+    ayFX_init();
+    msxhal_install_isr(&audio_isr);
+    
+    PSG_initRegisters();
+    ayr_play(&res_midi_chopin_chpn_op10_e01_mid,SEGMENT(res_midi_chopin_chpn_op10_e01_mid));
+
+    restore_code_segment(oldCodeSegment);    
+
+    start();
+}
 
 
