@@ -116,14 +116,15 @@ typedef uint8_t  U8x8  [8];
 ////////////////////////////////////////////////////////////////////////
 // BLOCK FUNCTIONS
 
-#define USING_PAGE_A(module) uint8_t K5_PAGE_A_ ## module ()
-#define USING_PAGE_B(module) uint8_t K5_PAGE_B_ ## module ()
-#define USING_PAGE_C(module) uint8_t K5_PAGE_C_ ## module ()
-#define SEGMENT_A(module) ((uint8_t)(K5_PAGE_A_ ## module ()))
-#define SEGMENT_B(module) ((uint8_t)(K5_PAGE_B_ ## module ()))
-#define SEGMENT_C(module) ((uint8_t)(K5_PAGE_C_ ## module ()))
 
 #ifdef MSX
+
+	#define USING_PAGE_A(module) uint8_t K5_PAGE_A_ ## module ()
+	#define USING_PAGE_B(module) uint8_t K5_PAGE_B_ ## module ()
+	#define USING_PAGE_C(module) uint8_t K5_PAGE_C_ ## module ()
+	#define SEGMENT_A(module) ((uint8_t)(K5_PAGE_A_ ## module ()))
+	#define SEGMENT_B(module) ((uint8_t)(K5_PAGE_B_ ## module ()))
+	#define SEGMENT_C(module) ((uint8_t)(K5_PAGE_C_ ## module ()))
 
 	extern volatile uint8_t current_segment_a;
 	extern volatile uint8_t current_segment_b;
@@ -143,6 +144,13 @@ typedef uint8_t  U8x8  [8];
 	inline void restore_page_c(uint8_t oldSegment) { *(uint8_t *)0xB000 = current_segment_c = oldSegment; }
 
 #elif LINUX
+
+	#define USING_PAGE_A(module) 
+	#define USING_PAGE_B(module) 
+	#define USING_PAGE_C(module) 
+	#define SEGMENT_A(module) 0
+	#define SEGMENT_B(module) 0
+	#define SEGMENT_C(module) 0
 	
 	inline static uint8_t load_page_a(uint8_t a) { (void)(a); return 0; }
 	inline static uint8_t load_page_b(uint8_t a) { (void)(a); return 0; }

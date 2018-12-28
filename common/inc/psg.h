@@ -61,6 +61,7 @@ void ayFX_spin();
 
 typedef struct { const uint8_t *channels[3]; uint16_t fames; } AYR;
 
+void ayr_init();
 void ayr_play(const AYR *ayr, uint8_t segment);
 void ayr_spin();
 

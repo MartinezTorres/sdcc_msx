@@ -6,17 +6,17 @@
 #include <res/ayfx/inicio_juego.afb.h>
 
 #include <res/midi/indy4/theme_and_opening_credits.mid.h>
-#include <res/midi/chopin/chpn_op10_e01.mid.h>
+#include <res/midi/chopin/chpn_op10_e05.mid.h>
 
-USING(res_midi_chopin_chpn_op10_e01_mid);
-USING(res_ayfx_inicio_juego_afb);
-USING(psg);
+USING_PAGE_A(psg);
+USING_PAGE_C(chpn_op10_e05_mid);
+USING_PAGE_C(inicio_juego_afb);
 
 void audio_isr();
 
 void audio_isr() {
     
-    uint8_t oldCodeSegment = load_code_segment(SEGMENT(psg));
+    uint8_t oldSegmentPageA = load_page_a(SEGMENT_A(psg));
 
     TMS9918_setRegister(7,0x77);
     ayr_spin();
@@ -29,7 +29,7 @@ void audio_isr() {
     PSG_syncRegisters();
     TMS9918_setRegister(7,0x55);
 
-    restore_code_segment(oldCodeSegment);    
+    restore_page_a(oldSegmentPageA);    
     TMS9918_setRegister(7,0);    
 }
 
@@ -49,9 +49,9 @@ INLINE int start() {
 	
 	if (key!=0 && released) {
 	    
-	    uint8_t oldCodeSegment = load_code_segment(SEGMENT(psg));
-	    ayFX_afb(res_ayfx_inicio_juego_afb,SEGMENT(res_ayfx_inicio_juego_afb),key>>4,15,0);
-	    restore_code_segment(oldCodeSegment);    
+	    uint8_t oldSegmentPageA = load_page_a(SEGMENT_A(psg));
+	    ayFX_afb(inicio_juego_afb,SEGMENT_C(inicio_juego_afb),key>>4,15,0);
+	    restore_page_a(oldSegmentPageA);    
 	    
 	    bd = bd + 0x11;
 	    bd = bd & 0x33;
@@ -66,16 +66,17 @@ INLINE int start() {
 
 int main(void) {
 
-    uint8_t oldCodeSegment = load_code_segment(SEGMENT(psg));
+    uint8_t oldSegmentPageA = load_page_a(SEGMENT_A(psg));
 
     msxhal_init();
+    ayr_init();
     ayFX_init();
     msxhal_install_isr(&audio_isr);
     
     PSG_initRegisters();
-    ayr_play(&res_midi_chopin_chpn_op10_e01_mid,SEGMENT(res_midi_chopin_chpn_op10_e01_mid));
+    ayr_play(&chpn_op10_e05_mid,SEGMENT_C(chpn_op10_e05_mid));
 
-    restore_code_segment(oldCodeSegment);    
+    restore_page_a(oldSegmentPageA);    
 
     start();
 }

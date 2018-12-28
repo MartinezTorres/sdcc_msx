@@ -2,8 +2,9 @@
 
 #ifdef MSX
 
-volatile uint8_t current_code_segment;
-volatile uint8_t current_data_segment;
+volatile uint8_t current_segment_a;
+volatile uint8_t current_segment_b;
+volatile uint8_t current_segment_c;
 
 static void (*custom_isr)(void);
 void msx_hal_isr(void) { 

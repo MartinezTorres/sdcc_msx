@@ -116,7 +116,7 @@ out/msx/%.rom.old: tmp/%.ihx
 out/msx/%.rom: tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM)
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	@tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM) $@
+	tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM) $@
 
 msx: out/msx/$(NAME).rom
 	@echo $(MSG)

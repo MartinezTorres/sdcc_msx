@@ -3,7 +3,7 @@
 //
 // Manuel Martinez (salutte@gmail.com)
 //
-// FLAGS: -std=c++14
+// FLAGS: -std=c++14 -O0
 
 #include <iostream>
 #include <sstream>
@@ -139,8 +139,8 @@ struct REL {
 	std::vector<SYMBOL> symbols;
 	
 	bool enabled = false;
-	bool bankedAllowed = false;
-	int bank = 0;
+	int page = 0;
+	int segment = 0;
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -184,7 +184,7 @@ struct REL {
 
 int main(int argc, char *argv[]) {
 	
-	Log::reportLevel(3);
+	Log::reportLevel(0);
 	
 	std::set<std::string> known_areas = { "_CODE", "_DATA", "_GSINIT", "_GSFINAL", "_HEADER0" };
 	std::vector<REL> rels;
@@ -212,7 +212,6 @@ int main(int argc, char *argv[]) {
 			if (type=="XL2") { // DEFAULT
 			} else if (type=="M") { // NOT REQUIRED
 				
-				rel.bankedAllowed = true;
 				isl >> rel.name;
 				for (auto &r : rels)
 					if (r.name == rel.name)
@@ -262,7 +261,7 @@ int main(int argc, char *argv[]) {
 				
 				if (area.name=="_HEADER0") {
 					rel.enabled=true;
-					rel.bankedAllowed=false;
+					rel.page=0;
 				}
 
 				rel.areas.push_back(area);
@@ -283,22 +282,23 @@ int main(int argc, char *argv[]) {
 	// FAST ERROR CHECKING
 	if (rels.empty()) throw std::runtime_error("No files to parse");
 	
+	
 	// ENABLE ALL REQUIRED FILES / MODULES
 	for (;;) {
 		
 		bool updated = false;
 
-		std::set<std::string> referencedSymbols;
+		std::map<std::string,int> referencedSymbols;
 		std::set<std::string> definedSymbols;
 
 		for (auto &rel : rels) {
 			if (not rel.enabled) continue;
 			for (auto &sym : rel.symbols) {
 				if (sym.type!=REL::SYMBOL::REF) continue;
-				if (sym.name.find("_K5_SEGMENT_")==0) {
+				if (sym.name.find("_K5_PAGE_")==0) {
 					continue;
 				}
-				referencedSymbols.insert(sym.name);
+				referencedSymbols[sym.name] = 0;
 			}
 		}
 
@@ -314,20 +314,24 @@ int main(int argc, char *argv[]) {
 				if (rel.enabled and referencedSymbols.count(sym.name)) {
 					if (definedSymbols.count(sym.name)) throw std::runtime_error("Symbol: " + sym.name + "defined multiple times");
 					definedSymbols.insert(sym.name);
+					referencedSymbols[sym.name]++;
 				}
 			}
 		}
 		
+		for (auto &ref : referencedSymbols)
+			if (ref.second==0)
+				throw std::runtime_error("Referenced Symbol: " + ref.first + " not defined");
+				
 		if (not updated) break;
 	}
-	
-	// CHECK WITH MODULES CAN BE BANKED
-	for (auto &rel1 : rels) {
+
+	// CHECK WHICH MODULES CAN BE PLACED IN NON-ZERO SEGMENTS, AND TO WHICH BANK THEY BELONG
+	/*for (auto &rel1 : rels) {
 		if (not rel1.enabled) continue;
 		for (auto &sym1 : rel1.symbols) {
 			if (sym1.type!=REL::SYMBOL::DEF) continue; 
-			// for each symbol defined in rel1
-			
+			// for each symbol defined in rel1			
 		
 			for (auto &rel2 : rels) {
 				for (auto &sym2 : rel2.symbols) {
@@ -347,9 +351,53 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
+	}*/
+	
+	{
+		std::map<std::string,REL *> modulesByName;
+
+		for (auto &&rel : rels)
+			if (rel.enabled)
+				modulesByName.emplace(rel.name,&rel);
+				
+		for (auto &&mod : modulesByName)
+			Log(3) << mod.first;
+
+		for (auto &&rel : rels) {
+			if (not rel.enabled) continue;
+			for (auto &sym : rel.symbols) {
+				if (sym.type!=REL::SYMBOL::REF) continue; 
+				if (sym.name.find("_K5_PAGE_")!=0) continue;
+				
+				int page = sym.name.substr(std::string("_K5_PAGE_").size(),1)[0]-'A'+1;
+				std::string moduleName = sym.name.substr(std::string("_K5_PAGE_X_").size());
+				
+				if (modulesByName.count(moduleName)==0)
+					throw std::runtime_error("Module " + moduleName + " unknown");
+				
+				if (modulesByName[moduleName]->page==0)
+					modulesByName[moduleName]->page = page;
+					
+				if (modulesByName[moduleName]->page != page)
+					throw std::runtime_error("Module " + moduleName + " required at different pages");
+			}
+		}
+
+		for (auto &&rel : rels) {
+			if (not rel.enabled) continue;
+			for (auto &sym : rel.symbols) {
+				if (sym.type!=REL::SYMBOL::REF) continue; 
+				if (sym.name.find("_K5_PAGE_")!=0) continue;
+				
+				std::string moduleName = sym.name.substr(std::string("_K5_PAGE_X_").size());
+				
+				if (modulesByName[moduleName]->page == rel.page)
+					throw std::runtime_error("Module " + rel.name + " is loading " + moduleName + " in its own page");
+			}
+		}
 	}
 	
-	// ALLOCATE NON BANKABLE ALL AREAS
+	// ALLOCATE ALL NON BANKABLE AREAS
 	size_t rom_ptr = 0x4000;
 	size_t ram_ptr = 0xC000;
 	{
@@ -367,7 +415,7 @@ int main(int argc, char *argv[]) {
 		
 		for (auto &rel : rels) {
 			if (not rel.enabled) continue;
-			if (rel.bankedAllowed) continue;
+			if (not rel.page==0) continue;
 			for (auto &area:  rel.areas) {
 				if (area.name!="_CODE") continue;
 				if (area.type != REL::AREA::RELATIVE) throw std::runtime_error(area.name + " not relative: " + rel.filename);
@@ -375,7 +423,7 @@ int main(int argc, char *argv[]) {
 				rom_ptr += area.size;
 
 
-				Log(1) << "Placed: " << rel.name << " at: 0x" << std::hex << area.addr << std::dec << " (" << area.size << " bytes) in bank: " << rel.bank;
+				Log(1) << "Placed: " << rel.name << " at: 0x" << std::hex << area.addr << std::dec << " (" << area.size << " bytes) in page: " << rel.page << " and segment: " << rel.segment;
 			}
 		}
 
@@ -391,6 +439,8 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
+		Log(2) << "Allocated: " << (rom_ptr-0x4000) << " bytes of ROM";
+		if (rom_ptr>0x6000) throw std::runtime_error("Main segment ROM doesn't fit 8KB");
 
 		for (auto &rel : rels) {
 			if (not rel.enabled) continue;
@@ -401,26 +451,25 @@ int main(int argc, char *argv[]) {
 				area.addr = ram_ptr;
 				ram_ptr += area.size;
 			}
-		}
-		
-		Log(2) << "Allocated: " << (rom_ptr-0x4000) << " bytes of ROM";
-		Log(2) << "Allocated: " << (ram_ptr-0xC000) << " bytes of RAM";
-		
-		if (rom_ptr>0x8000) throw std::runtime_error("Non bankable ROM doesn't fit 16KB");
+		}		
+		Log(2) << "Allocated: " << (ram_ptr-0xC000) << " bytes of RAM";		
 		if (ram_ptr>0xF000) throw std::runtime_error("RAM usage is larger than 12KB");
 	}
 
-	// ALLOCATE BANKABLE ALL AREAS
+	// ALLOCATE BANKABLE CODE AREAS
 	{	
 		std::vector<std::pair<size_t,std::reference_wrapper<REL>>> bankableRels;
+		
 		for (auto &rel : rels) {
 			if (not rel.enabled) continue;
-			if (not rel.bankedAllowed) continue;
+			if (not rel.page!=0) continue;
 			for (auto &area:  rel.areas) {
 				if (area.name!="_CODE") continue;
 				if (area.type != REL::AREA::RELATIVE) throw std::runtime_error(area.name + " not relative: " + rel.filename);
 				
 				bankableRels.emplace_back(area.size,std::ref(rel));
+				
+				if (area.size>0x2000) throw std::runtime_error("File: " + rel.name + " too large to fit a segment");
 			}
 		}
 		
@@ -430,35 +479,26 @@ int main(int argc, char *argv[]) {
 		});
 		std::reverse(bankableRels.begin(), bankableRels.end());
 
-		std::vector<size_t> bins;
-		bins.push_back(0x8000-rom_ptr);
+		std::vector<size_t> segments;
+		segments.push_back(0x6000-rom_ptr);
 		
 		for (auto &prel: bankableRels) {
 			size_t i;
-			for (i=0; i<bins.size() and bins[i]<prel.first; i++);
-			if (i==bins.size()) 
-				bins.push_back(0x2000);
+			for (i=0; i<segments.size() and segments[i]<prel.first; i++);
+			if (i==segments.size()) 
+				segments.push_back(0x2000);
 
-			if (i==0) {
-				for (auto &a : prel.second.get().areas)
-					if (a.name=="_CODE")
-						a.addr = 0x8000-bins[i]; 
-			} else {
-				for (auto &a : prel.second.get().areas)
-					if (a.name=="_CODE")
-						a.addr = 0xA000-bins[i]; 
-			}
+			for (auto &a : prel.second.get().areas)
+				if (a.name=="_CODE")
+					a.addr = 0x2000*(2+prel.second.get().page) + 0x2000 - segments[i]; 
 			
-			//for (auto &a : prel.second.get().areas)
-			//	if (a.name=="_CODE")
-			//		a.type = REL::AREA::ABSOLUTE; 
-			bins[i] -= prel.first;
+			segments[i] -= prel.first;
 			
-			prel.second.get().bank = (i?i+1:0);
+			prel.second.get().segment = i;
 			
 			for (auto &a : prel.second.get().areas)
 				if (a.name=="_CODE")
-					Log(2) << "Placed: " << prel.second.get().name << " at: 0x" << std::hex << a.addr << std::dec << " (" << prel.first << " bytes) in bank: " << prel.second.get().bank;
+					Log(2) << "Placed: " << prel.second.get().name << " at: 0x" << std::hex << a.addr << std::dec << " (" << prel.first << " bytes) in page: " << prel.second.get().page << " and segment " << prel.second.get().segment;
 		}
 	}
 	
@@ -476,14 +516,15 @@ int main(int argc, char *argv[]) {
 				symbolsAddress[symbol.name] = areaAddress[symbol.areaName] + symbol.addr;
 				symbol.absoluteAddress = symbolsAddress[symbol.name];
 				if (symbol.name[0]!='.') 
-					Log(2) << "Symbol: " << symbol.name << " defined at: 0x" << std::hex << symbol.absoluteAddress << std::dec << " at bank: " << rel.bank;
+					Log(2) << "Symbol: " << symbol.name << " defined at: 0x" << std::hex << symbol.absoluteAddress << std::dec << " at page: " << rel.page;
 			}
 		}
 	}
 	
 	// DO EXTRACT THE CODE
-	std::vector<uint8_t> rom(0xC000,0xff);
-	for (auto &rel : rels) {
+	std::vector<uint8_t> rom(0x10000,0xff);
+	for (auto &rel : rels) {		
+		if (not rel.enabled) continue;
 		
 		std::ifstream isf(rel.filename);
 		std::string line;
@@ -539,13 +580,13 @@ int main(int argc, char *argv[]) {
 						R3_NORM=0x00, R3_PCR =0x04, 
 						R3_BYT1=0x00, R3_BYTX=0x08, 
 						R3_SGND=0x00, R3_USGN=0x10,
-						R3_LSB=0x00, R3_MSB=0x80
+						R3_LSB =0x00, R3_MSB =0x80
 					};
 					
 					size_t idx = xx1*0x100 + xx0;
 					size_t address;
 					
-					if ( n1 == R3_SYM and rel.symbols[idx].name.find("_K5_SEGMENT_")==0) {
+					if ( n1 == R3_SYM and rel.symbols[idx].name.find("_K5_PAGE_")==0) {
 						
 						if (n2==n2Adjust) {
 							last_t_pos--;
@@ -563,11 +604,11 @@ int main(int argc, char *argv[]) {
 						for (auto &rel2 : rels) {
 							std::string requested_module = 
 								rel.symbols[idx].name.substr(
-									std::string("_K5_SEGMENT_").size()
+									std::string("_K5_PAGE_X_").size()
 								);
 							if (rel2.name == requested_module) {
 								Log(0) << "Looking for module: " << requested_module;
-								T[n2+1] = rel.bank;
+								T[n2+1] = rel.segment;
 							}
 						}
 
@@ -634,7 +675,9 @@ int main(int argc, char *argv[]) {
 				if (T.size())
 					while (rom.size() < last_t_pos + T.size()) 
 						rom.resize(rom.size()+0x4000,0xff);
-					
+				
+				//if (T.size()) Log(0) << rel.name << " " << std::hex << last_t_pos;
+				
 				for (auto &t : T)
 					rom[last_t_pos++] = t;
 
@@ -644,6 +687,9 @@ int main(int argc, char *argv[]) {
 			}
 		}
 	}
+
+
+	// DO WRITE THE ROM
 	{
 		
 		std::string romName = "out.rom";
@@ -654,12 +700,6 @@ int main(int argc, char *argv[]) {
 		std::ofstream off(romName);
 		off.write((const char *)&rom[0x4000],rom.size()-0x4000);
 	}
-	
-	
-	
-	for (auto &rel : rels)
-		if (rel.enabled)
-			Log(0) << "Rel: " << rel.filename << " is " << (rel.enabled?"":"not ") << "enabled" << " and " << (rel.bankedAllowed?"":"not ") << "bankable";
-	
+		
 	return 0;
 }

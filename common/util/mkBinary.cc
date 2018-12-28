@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
 	std::ifstream iff(argv[1]);
 	
 	std::string name = argv[1];
+	name = name.substr(std::min(name.rfind('/'),name.rfind('\\'))+1);
 	for (auto &&s : "_!-+/\\.'() ")
 		for (auto &&c : name)
 			if (c==s) c = '_';

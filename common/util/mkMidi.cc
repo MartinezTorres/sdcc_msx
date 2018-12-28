@@ -1016,6 +1016,7 @@ int main(int argc, char *argv[]) {
 		//name = "midi_"+name.substr(0,name.size()-4);
 
 		std::string name = sourceMidi;
+		name = name.substr(std::min(name.rfind('/'),name.rfind('\\'))+1);
 		for (auto &&s : "_!-+/\\.'() ")
 			for (auto &&c : name)
 				if (c==s) c = '_';
@@ -1032,7 +1033,7 @@ int main(int argc, char *argv[]) {
 				snprintf(buf,20,"0x%02X",D[i]);
 				oss << buf << ((i+1)%16?", ":", \n\t");
 			}
-			oss << "};" << std::endl;
+			oss << "0x00, 0x00, 0x00 };" << std::endl;
 		}
 
 		oss << "typedef struct { const uint8_t *channels[3]; uint16_t fames; } AYR;" << std::endl;
