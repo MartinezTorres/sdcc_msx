@@ -1010,6 +1010,9 @@ int main(int argc, char *argv[]) {
 			Log(0) << "LT: " << lastTime ;
 		}
 	
+		for (auto &&d : data) 
+			if (d.size()>2500) 
+				d.resize(2500);
 		std::ofstream oss(targetC);
 		
 		//std::string name = sourceMidi.substr(std::min(sourceMidi.rfind('/'),sourceMidi.rfind('\\'))+1);
@@ -1036,8 +1039,8 @@ int main(int argc, char *argv[]) {
 			oss << "0x00, 0x00, 0x00 };" << std::endl;
 		}
 
-		oss << "typedef struct { const uint8_t *channels[3]; uint16_t fames; } AYR;" << std::endl;
-		oss << "const AYR " + name + " = { { &dataA[0], &dataB[0], &dataC[0]}, " << lastFrames.front() << "};" << std::endl;
+		oss << "typedef struct { const uint8_t *channels[3]; } AYR;" << std::endl;
+		oss << "const AYR " + name + " = { { &dataA[0], &dataB[0], &dataC[0]} };" << std::endl;
 	}
 	
 	

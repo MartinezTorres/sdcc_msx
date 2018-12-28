@@ -59,7 +59,7 @@ void ayFX_afx(const uint8_t *afx, uint8_t segment, uint8_t priority, int8_t adju
 void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority, int8_t adjustedVolume);
 void ayFX_spin();
 
-typedef struct { const uint8_t *channels[3]; uint16_t fames; } AYR;
+typedef struct { const uint8_t *channels[3]; } AYR;
 
 void ayr_init();
 void ayr_play(const AYR *ayr, uint8_t segment);

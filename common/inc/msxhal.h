@@ -85,7 +85,7 @@ typedef uint8_t  U8x8  [8];
 		push de \
 		push af \
 		ld de,HASH_SIGN _##DATA \
-		xor a \
+		xor a, a \
 	__endasm; \
 		REPEAT( __asm__("ld (de),a"); __asm__("inc de");, N) \
 	__asm \
