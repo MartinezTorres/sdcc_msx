@@ -66,11 +66,18 @@ static const uint16_t midi2ay[] = {
 
 typedef struct {
 	
+	uint8_t duration;
+	const uint8_t *p;
+} T_AYR_Channel_Status;
+
+typedef struct {
+	
 	const AYR *ayr;
 	uint8_t segment;
-	uint8_t duration[3];
-	const uint8_t *channels[3];
+	
+	T_AYR_Channel_Status channels[3];
 } T_AYR_Status;
+
 
 static T_AY_3_8910_Registers ayr_registers;
 static T_AYR_Status ayr_status;
@@ -80,97 +87,124 @@ void ayr_init() { ayr_play(nullptr, 0); }
 void ayr_play(const AYR *ayr, uint8_t segment) {
 	
 	
-	uint8_t oldSegmentPageC = load_page_c(segment);
 	
 	ZERO(ayr_registers,14);
 	
 	ayr_status.ayr = ayr;
 	ayr_status.segment = segment;
 	
-	ayr_status.duration[0] = 1;
-	ayr_status.duration[1] = 1;
-	ayr_status.duration[2] = 1;
+	ayr_status.channels[0].duration = 1;
+	ayr_status.channels[1].duration = 1;
+	ayr_status.channels[2].duration = 1;
 
 	if (ayr!=nullptr) {
-		ayr_status.channels[0] = ayr->channels[0];
-		ayr_status.channels[1] = ayr->channels[1];
-		ayr_status.channels[2] = ayr->channels[2];
+		uint8_t oldSegmentPageC = load_page_c(segment);
+		
+		ayr_status.channels[0].p = ayr->channels[0];
+		ayr_status.channels[1].p = ayr->channels[1];
+		ayr_status.channels[2].p = ayr->channels[2];
+		
+		restore_page_c(oldSegmentPageC);    
 	}
 
-	restore_page_c(oldSegmentPageC);    
+}
+
+INLINE bool ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
+
+	uint8_t meta;
+	if (--chan->duration) return true;
+	
+	meta = *chan->p++;
+
+	if ( !!(meta & 0x80) ) {
+		
+		uint8_t tone = *chan->p++;
+		if (tone) {
+			ayr_registers.tone[i] = midi2ay[tone];
+			switch (i) {
+			case 0:
+				ayr_registers.enable.tone_a  = 0;
+				ayr_registers.enable.noise_a = 1;
+				break;
+			case 1:
+				ayr_registers.enable.tone_b  = 0;
+				ayr_registers.enable.noise_b = 1;
+				break;
+			case 2:
+			default:
+				ayr_registers.enable.tone_c  = 0;
+				ayr_registers.enable.noise_c = 1;
+				break;
+			
+			}
+		} else {
+			switch (i) {
+			case 0:
+				ayr_registers.enable.tone_a  = 1;
+				ayr_registers.enable.noise_a = 0;
+				break;
+			case 1:
+				ayr_registers.enable.tone_b  = 1;
+				ayr_registers.enable.noise_b = 0;
+				break;
+			case 2:
+			default:
+				ayr_registers.enable.tone_c  = 1;
+				ayr_registers.enable.noise_c = 0;
+				break;
+			}				
+		}
+	}
+
+	ayr_registers.amplitude[i].volume = meta & 0x0F;
+
+	{
+		uint8_t duration = (meta&0x70)>>4;
+		
+		if ( duration == 0 ) {
+			return false;
+		}
+		
+		if ( duration == 0x07 )
+			duration = *chan->p++;
+		chan->duration = duration;
+	}	
+	return true;	
 }
 
 void ayr_spin() {
 	
 	
 	uint8_t oldSegmentPageC = load_page_c(ayr_status.segment);
-	uint8_t i;
 	if (ayr_status.ayr==nullptr) return;
-	for (i=0; i<3; i++) {
+	
+	if (
+		!ayr_spin_channel(&ayr_status.channels[0],0) ||
+		!ayr_spin_channel(&ayr_status.channels[1],1) ||
+		!ayr_spin_channel(&ayr_status.channels[2],2)) {
 		
-		uint8_t meta;
-		if (--ayr_status.duration[i]) continue;
-		
-		meta = *ayr_status.channels[i]++;
-
-		if ( !!(meta & 0x80) ) {
-			
-			uint8_t tone = *ayr_status.channels[i]++;
-			if (tone) {
-				ayr_registers.tone[i] = midi2ay[tone];
-				switch (i) {
-				case 0:
-					ayr_registers.enable.tone_a  = 0;
-					ayr_registers.enable.noise_a = 1;
-					break;
-				case 1:
-					ayr_registers.enable.tone_b  = 0;
-					ayr_registers.enable.noise_b = 1;
-					break;
-				case 2:
-				default:
-					ayr_registers.enable.tone_c  = 0;
-					ayr_registers.enable.noise_c = 1;
-					break;
-				
-				}
-			} else {
-				switch (i) {
-				case 0:
-					ayr_registers.enable.tone_a  = 1;
-					ayr_registers.enable.noise_a = 0;
-					break;
-				case 1:
-					ayr_registers.enable.tone_b  = 1;
-					ayr_registers.enable.noise_b = 0;
-					break;
-				case 2:
-				default:
-					ayr_registers.enable.tone_c  = 1;
-					ayr_registers.enable.noise_c = 0;
-					break;
-				}				
-			}
-		}
-
-		ayr_registers.amplitude[i].volume = meta & 0x0F;
-
-		{
-			uint8_t duration = (meta&0x70)>>4;
-			
-			if ( duration == 0 ) {
-				ayr_play(ayr_status.ayr, ayr_status.segment);
-				return;
-			}
-			
-			if ( duration == 0x07 )
-				duration = *ayr_status.channels[i]++;
-			ayr_status.duration[i] = duration;
-		}		
+		ayr_play(ayr_status.ayr, ayr_status.segment);
 	}
 
-	for (i=0; i<14; i++)
-		AY_3_8910_Registers.reg[i] = ayr_registers.reg[i];
+	{
+		uint8_t *src = ayr_registers.reg;
+		uint8_t *target = AY_3_8910_Registers.reg;
+		
+		*target++ = *src++;
+		*target++ = *src++;
+		*target++ = *src++;
+		*target++ = *src++;
+
+		*target++ = *src++;
+		*target++ = *src++;
+		*target++ = *src++;
+		*target++ = *src++;
+
+		*target++ = *src++;
+		*target++ = *src++;
+		*target++ = *src++;
+		*target++ = *src++;
+	}
 		
 	restore_page_c(oldSegmentPageC);    
 }

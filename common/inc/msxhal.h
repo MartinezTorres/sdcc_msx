@@ -122,42 +122,53 @@ typedef uint8_t  U8x8  [8];
 	#define USING_PAGE_A(module) uint8_t K5_PAGE_A_ ## module ()
 	#define USING_PAGE_B(module) uint8_t K5_PAGE_B_ ## module ()
 	#define USING_PAGE_C(module) uint8_t K5_PAGE_C_ ## module ()
+	#define USING_PAGE_D(module) uint8_t K5_PAGE_D_ ## module ()
 	#define SEGMENT_A(module) ((uint8_t)(K5_PAGE_A_ ## module ()))
 	#define SEGMENT_B(module) ((uint8_t)(K5_PAGE_B_ ## module ()))
 	#define SEGMENT_C(module) ((uint8_t)(K5_PAGE_C_ ## module ()))
+	#define SEGMENT_D(module) ((uint8_t)(K5_PAGE_D_ ## module ()))
 
 	extern volatile uint8_t current_segment_a;
 	extern volatile uint8_t current_segment_b;
 	extern volatile uint8_t current_segment_c;
+	extern volatile uint8_t current_segment_d;
 	
 	inline uint8_t load_page_a(uint8_t newSegment) { register uint8_t oldSegment = current_segment_a;
-		*(uint8_t *)0x7000 = current_segment_a = newSegment; return oldSegment; }
+		*(uint8_t *)0x5000 = current_segment_a = newSegment; return oldSegment; }
 
 	inline uint8_t load_page_b(uint8_t newSegment) { register uint8_t oldSegment = current_segment_b;
-		*(uint8_t *)0x9000 = current_segment_b = newSegment; return oldSegment; }
+		*(uint8_t *)0x7000 = current_segment_b = newSegment; return oldSegment; }
 
 	inline uint8_t load_page_c(uint8_t newSegment) { register uint8_t oldSegment = current_segment_c;
-		*(uint8_t *)0xB000 = current_segment_c = newSegment; return oldSegment; }
+		*(uint8_t *)0x9000 = current_segment_c = newSegment; return oldSegment; }
 
-	inline void restore_page_a(uint8_t oldSegment) { *(uint8_t *)0x7000 = current_segment_a = oldSegment; }
-	inline void restore_page_b(uint8_t oldSegment) { *(uint8_t *)0x9000 = current_segment_b = oldSegment; }
-	inline void restore_page_c(uint8_t oldSegment) { *(uint8_t *)0xB000 = current_segment_c = oldSegment; }
+	inline uint8_t load_page_d(uint8_t newSegment) { register uint8_t oldSegment = current_segment_d;
+		*(uint8_t *)0xB000 = current_segment_d = newSegment; return oldSegment; }
+
+	inline void restore_page_a(uint8_t oldSegment) { *(uint8_t *)0x5000 = current_segment_a = oldSegment; }
+	inline void restore_page_b(uint8_t oldSegment) { *(uint8_t *)0x7000 = current_segment_b = oldSegment; }
+	inline void restore_page_c(uint8_t oldSegment) { *(uint8_t *)0x9000 = current_segment_c = oldSegment; }
+	inline void restore_page_d(uint8_t oldSegment) { *(uint8_t *)0xB000 = current_segment_d = oldSegment; }
 
 #elif LINUX
 
 	#define USING_PAGE_A(module) 
 	#define USING_PAGE_B(module) 
 	#define USING_PAGE_C(module) 
+	#define USING_PAGE_D(module) 
 	#define SEGMENT_A(module) 0
 	#define SEGMENT_B(module) 0
 	#define SEGMENT_C(module) 0
+	#define SEGMENT_D(module) 0
 	
 	inline static uint8_t load_page_a(uint8_t a) { (void)(a); return 0; }
 	inline static uint8_t load_page_b(uint8_t a) { (void)(a); return 0; }
 	inline static uint8_t load_page_c(uint8_t a) { (void)(a); return 0; }
+	inline static uint8_t load_page_d(uint8_t a) { (void)(a); return 0; }
 	inline static void restore_page_a(uint8_t a) { (void)(a); }
 	inline static void restore_page_b(uint8_t a) { (void)(a); }
 	inline static void restore_page_c(uint8_t a) { (void)(a); }
+	inline static void restore_page_d(uint8_t a) { (void)(a); }
 
 #else
 	#error "Architecture Not Supported"

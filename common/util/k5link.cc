@@ -120,6 +120,7 @@ struct REL {
 		std::string name;
 		size_t size;
 		size_t addr;
+		size_t rom_addr;
 		enum { ABSOLUTE, RELATIVE} type;
 		
 	};
@@ -185,6 +186,12 @@ struct REL {
 int main(int argc, char *argv[]) {
 	
 	Log::reportLevel(0);
+	
+	std::string romName = "out.rom";
+	for (int i=1; i<argc; i++) 
+		if (std::string(argv[i]).size()-std::string(argv[i]).find(".rom") == 4)
+			romName = std::string(argv[i]);
+	
 	
 	std::set<std::string> known_areas = { "_CODE", "_DATA", "_GSINIT", "_GSFINAL", "_HEADER0" };
 	std::vector<REL> rels;
@@ -369,7 +376,7 @@ int main(int argc, char *argv[]) {
 				if (sym.type!=REL::SYMBOL::REF) continue; 
 				if (sym.name.find("_K5_PAGE_")!=0) continue;
 				
-				int page = sym.name.substr(std::string("_K5_PAGE_").size(),1)[0]-'A'+1;
+				int page = sym.name.substr(std::string("_K5_PAGE_").size(),1)[0]-'A';
 				std::string moduleName = sym.name.substr(std::string("_K5_PAGE_X_").size());
 				
 				if (modulesByName.count(moduleName)==0)
@@ -409,6 +416,7 @@ int main(int argc, char *argv[]) {
 				if (area.type != REL::AREA::ABSOLUTE) throw std::runtime_error(area.name + " not absolute: " + rel.filename);
 				if (area.addr != 0x4000) throw std::runtime_error("HEADER not at 0x4000: " + rel.filename);
 
+				area.rom_addr = area.addr - 0x4000;
 				rom_ptr += area.size;
 			}
 		}
@@ -419,9 +427,10 @@ int main(int argc, char *argv[]) {
 			for (auto &area:  rel.areas) {
 				if (area.name!="_CODE") continue;
 				if (area.type != REL::AREA::RELATIVE) throw std::runtime_error(area.name + " not relative: " + rel.filename);
-				area.addr = rom_ptr;
-				rom_ptr += area.size;
 
+				area.addr = rom_ptr;
+				area.rom_addr = area.addr - 0x4000;
+				rom_ptr += area.size;
 
 				Log(1) << "Placed: " << rel.name << " at: 0x" << std::hex << area.addr << std::dec << " (" << area.size << " bytes) in page: " << rel.page << " and segment: " << rel.segment;
 			}
@@ -435,6 +444,7 @@ int main(int argc, char *argv[]) {
 					if (area.type != REL::AREA::RELATIVE) throw std::runtime_error(area.name + " not relative: " + rel.filename);
 
 					area.addr = rom_ptr;
+					area.rom_addr = area.addr - 0x4000;
 					rom_ptr += area.size;
 				}
 			}
@@ -449,6 +459,7 @@ int main(int argc, char *argv[]) {
 				if (area.type != REL::AREA::RELATIVE) throw std::runtime_error(area.name + " not relative: " + rel.filename);
 
 				area.addr = ram_ptr;
+				area.rom_addr = 0;
 				ram_ptr += area.size;
 			}
 		}		
@@ -488,9 +499,12 @@ int main(int argc, char *argv[]) {
 			if (i==segments.size()) 
 				segments.push_back(0x2000);
 
-			for (auto &a : prel.second.get().areas)
-				if (a.name=="_CODE")
+			for (auto &a : prel.second.get().areas) {
+				if (a.name=="_CODE") {
 					a.addr = 0x2000*(2+prel.second.get().page) + 0x2000 - segments[i]; 
+					a.rom_addr = 0x2000*i + 0x2000-segments[i];
+				}
+			}
 			
 			segments[i] -= prel.first;
 			
@@ -498,10 +512,91 @@ int main(int argc, char *argv[]) {
 			
 			for (auto &a : prel.second.get().areas)
 				if (a.name=="_CODE")
-					Log(2) << "Placed: " << prel.second.get().name << " at: 0x" << std::hex << a.addr << std::dec << " (" << prel.first << " bytes) in page: " << prel.second.get().page << " and segment " << prel.second.get().segment;
+					Log(2) << "Module: " << prel.second.get().name << " addressed at: 0x" << std::hex << a.addr << std::dec << " (" << prel.first << " bytes) in page: " << prel.second.get().page << " and segment " << prel.second.get().segment;
 		}
 	}
 	
+	
+	// Generate area map
+	{
+		std::ofstream off("areas.map");
+		off << "AREA MAP: " << std::endl;
+		off << "# SG #  MAP #  ROM  # SIZE #   NAME   #   PAGE A   #   PAGE B   #   PAGE C   #   PAGE D   #" << std::endl;
+		off << "###########################################################################################" << std::endl;
+		for (size_t i=0; i<256; i++) {
+			
+			std::multimap<size_t, std::string> lines;
+			
+			for (auto &rel : rels) {
+				if (rel.segment != (int)i) continue;
+				if (not rel.enabled) continue;
+				for (auto &area:  rel.areas) {
+					if (area.size==0) continue;
+					if (area.name=="_DATA") continue;
+						
+					std::ostringstream oss;
+					
+					char s[200];
+					snprintf(s,199,"#%3X # %04lX # %05lX # %04lX # %8.8s #",rel.segment, area.addr, area.rom_addr, area.size, area.name.substr(1).c_str());	
+					oss << s;
+					for (int j=0; j<rel.page; j++) oss << "            #";
+					snprintf(s,199," %10.10s #",rel.name.c_str());
+					oss << s;	
+					for (int j=rel.page+1; j<4; j++) oss << "            #";
+					lines.emplace(area.addr,oss.str());
+					
+				}	
+			}
+			for (auto &&s : lines)
+				off << s.second << std::endl;
+			if (not lines.empty()) 
+				off << "###########################################################################################" << std::endl;
+
+		}
+	}
+
+	// Generate symbols map
+	{
+		std::ofstream off("symbols.map");
+		off << "Symbols MAP: " << std::endl;
+		off << "# SG #  MAP #  ROM  #  MODULE  #        PAGE A        #        PAGE B        #        PAGE C        #        PAGE D        #" << std::endl;
+		off << "############################################################################################################################" << std::endl;
+		for (size_t i=0; i<256; i++) {
+			
+			std::multimap<size_t, std::string> lines;
+			
+			for (auto &rel : rels) {
+				if (rel.segment != (int)i) continue;
+				if (not rel.enabled) continue;
+				for (auto &area:  rel.areas) {
+					if (area.size==0) continue;
+					if (area.name=="_DATA") continue;
+
+					for (auto &symbol : rel.symbols) {
+						if (symbol.type != REL::SYMBOL::DEF) continue;
+						if (symbol.areaName != area.name) continue;
+						
+						std::ostringstream oss;
+						
+						char s[200];
+						snprintf(s,199,"#%3X # %04lX # %05lX # %-8.8s #",rel.segment, area.addr + symbol.addr, area.rom_addr + symbol.addr, rel.name.c_str());	
+						oss << s;
+						for (int j=0; j<rel.page; j++) oss << "                      #";
+						snprintf(s,199," %-20.20s #",symbol.name.c_str());
+						oss << s;	
+						for (int j=rel.page+1; j<4; j++) oss << "                      #";
+						lines.emplace(area.addr,oss.str());
+					
+					}
+				}	
+			}
+			for (auto &&s : lines)
+				off << s.second << std::endl;
+			if (not lines.empty()) 
+				off << "############################################################################################################################" << std::endl;
+
+		}
+	}
 	
 	// DO LABEL SYMBOL ADDRESSES
 	std::map<std::string,size_t> symbolsAddress;
@@ -522,7 +617,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	// DO EXTRACT THE CODE
-	std::vector<uint8_t> rom(0x10000,0xff);
+	std::vector<uint8_t> rom(0x24000,0xff);
 	for (auto &rel : rels) {		
 		if (not rel.enabled) continue;
 		
@@ -530,12 +625,19 @@ int main(int argc, char *argv[]) {
 		std::string line;
 		
 		size_t current_area=0;
-		std::vector<size_t> area_pos;
-		for (auto &area : rel.areas)
-			if (area.type == REL::AREA::RELATIVE)
-				area_pos.push_back(area.addr);
-			else
-				area_pos.push_back(0);
+		std::vector<int> area_addr;
+		std::vector<int> area_rom_addr;
+		for (auto &area : rel.areas) {
+			if (area.type == REL::AREA::RELATIVE) {
+				area_addr.push_back(area.addr); 
+				area_rom_addr.push_back(area.rom_addr); 
+			} else {
+				if (area.size)
+					Log(3) << "MModule: " << rel.name << " Area: " << area.name << " " << area.addr << " " << area.rom_addr;
+				area_addr.push_back(0);
+				area_rom_addr.push_back(-0x4000);
+			}
+		}
 			
 		size_t last_t_pos=0;
 		std::vector<uint8_t> T;
@@ -557,7 +659,7 @@ int main(int argc, char *argv[]) {
 				
 				size_t xx0, xx1;
 				isl >> HEX(xx0,HEX::TWO_NIBBLES) >> HEX(xx1,HEX::TWO_NIBBLES);
-				last_t_pos = xx1*0x100 + xx0 + area_pos[current_area];
+				last_t_pos = xx1*0x100 + xx0 + area_rom_addr[current_area];
 				
 				T.clear();
 				size_t nn;
@@ -607,8 +709,8 @@ int main(int argc, char *argv[]) {
 									std::string("_K5_PAGE_X_").size()
 								);
 							if (rel2.name == requested_module) {
-								Log(0) << "Looking for module: " << requested_module;
-								T[n2+1] = rel.segment;
+								Log(0) << "Looking for module: " << requested_module << " " << rel2.segment;
+								T[n2+1] = rel2.segment;
 							}
 						}
 
@@ -627,10 +729,12 @@ int main(int argc, char *argv[]) {
 						
 						address = symbolsAddress[rel.symbols[idx].name];
 						
+						Log(3) << rel.symbols[idx].name << " " << std::hex << address;
+						
 						n1 -= R3_SYM;
 					} else  {
 					
-						address = area_pos[idx];
+						address = area_addr[idx];
 					}
 					
 					
@@ -672,14 +776,18 @@ int main(int argc, char *argv[]) {
 					}
 				}	
 
+
 				if (T.size())
 					while (rom.size() < last_t_pos + T.size()) 
-						rom.resize(rom.size()+0x4000,0xff);
+						rom.resize(rom.size()+0x2000,0xff);
 				
 				//if (T.size()) Log(0) << rel.name << " " << std::hex << last_t_pos;
+
+//				if (T.size()) Log(4) << std::hex << (last_t_pos - 0x2000*(rel.segment - rel.page)) << " " << rel.segment << " " << rel.page;
+					
 				
-				for (auto &t : T)
-					rom[last_t_pos++] = t;
+//				for (auto &t : T) rom[last_t_pos++] = t;
+				for (auto &t : T) rom[last_t_pos++] = t;
 
 			} else if (not type.empty()) {
 				
@@ -691,14 +799,8 @@ int main(int argc, char *argv[]) {
 
 	// DO WRITE THE ROM
 	{
-		
-		std::string romName = "out.rom";
-		for (int i=1; i<argc; i++) 
-			if (std::string(argv[i]).size()-std::string(argv[i]).find(".rom") == 4)
-				romName = std::string(argv[i]);
-
 		std::ofstream off(romName);
-		off.write((const char *)&rom[0x4000],rom.size()-0x4000);
+		off.write((const char *)&rom[0x0000],rom.size()-0x0000);
 	}
 		
 	return 0;

@@ -14,7 +14,7 @@ MSG = "\033[1;32m[$(@)]\033[1;31m\033[0m"
 
 CCZ80 = sdcc
 ASM = sdasz80
-OPENMSX = openmsx -machine C-BIOS_MSX2 -carta
+OPENMSX = openmsx -machine C-BIOS_MSX2  -carta 
 HEXBIN = makebin -s 4194304
 
 INCLUDES = -Itmp/inc -Iinc -Icommon/inc
@@ -61,6 +61,9 @@ BINARIES_SRC += $(shell find res/ -type f -name '*.mid')
 BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
 HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
 SOURCES_C    += $(BINARIES_GEN)
+
+tmp/%.c: tmp/inc/%.h
+	@echo $(MSG)
 
 tmp/inc/%.mid.h: %.mid tmp/common/util/mkMidi
 	@echo $(MSG)
@@ -121,7 +124,7 @@ out/msx/%.rom: tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM)
 msx: out/msx/$(NAME).rom
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	@$(OPENMSX) $< || true
+	$(OPENMSX) $< || true
 
 ##########################################################
 ### LINUX SECTION
