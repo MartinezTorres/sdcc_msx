@@ -12,7 +12,7 @@
 #include <res/midi/indy4/theme_and_opening_credits.mid.h>
 
 
-//USING_PAGE_B(psg);
+USING_PAGE_B(psg);
 USING_PAGE_C(chpn_op10_e05_mid);
 USING_PAGE_C(chpn_op10_e01_mid);
 USING_PAGE_C(chpn_op10_e12_mid);
@@ -23,7 +23,7 @@ void audio_isr();
 
 void audio_isr() {
     
-//    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
+    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
 
     TMS9918_setRegister(7,0x77);
     ayr_spin();
@@ -36,7 +36,7 @@ void audio_isr() {
     PSG_syncRegisters();
     TMS9918_setRegister(7,0x55);
 
-//    restore_page_b(oldSegmentPageB);    
+    restore_page_b(oldSegmentPageB);    
     TMS9918_setRegister(7,0);    
 }
 
@@ -52,7 +52,7 @@ INLINE int start() {
 	
 	if (key!=0 && released) {
 	    
-//	    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
+	    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
 	    DI();
 
 	    if (key==J_SPACE) ayr_play(&chpn_op10_e05_mid,SEGMENT_C(chpn_op10_e05_mid));
@@ -62,7 +62,7 @@ INLINE int start() {
 
 	    //ayFX_afb(inicio_juego_afb,SEGMENT_C(inicio_juego_afb),key>>4,15,0);
 	    EI();
-//	    restore_page_b(oldSegmentPageB);    
+	    restore_page_b(oldSegmentPageB);    
 	}
 	
 	released = (key==0);
@@ -73,7 +73,7 @@ INLINE int start() {
 
 int main(void) {
 
-//    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
+    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
 
     msxhal_init();
     ayr_init();
@@ -82,7 +82,7 @@ int main(void) {
     
     PSG_initRegisters();
 
- //   restore_page_b(oldSegmentPageB);    
+    restore_page_b(oldSegmentPageB);    
 
     start();
 }
