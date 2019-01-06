@@ -1,4 +1,21 @@
+# Warning - Big rework in progress... currently the PSG / midi processor is working, as well as the banking capable linker. See game/test_audio for an example.
+
+go to game/test_audio and do:
+
+make msx
+(press arrow keys to play music)
+
+Requires: gcc, opencv, cproto and make, among other packages. I'd appreciate feedback regarding libraries. 
+
+
+
+
+
+The below information is outdated.
+
 # sdcc-msx
+
+
 
 Environment for mixed development linux/msx in C and assembler.
 
