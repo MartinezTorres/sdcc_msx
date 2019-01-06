@@ -30,7 +30,7 @@ void audio_isr() {
     TMS9918_setRegister(7,0x44);
 
     TMS9918_setRegister(7,0x88);
-    //ayFX_spin();
+    ayFX_spin();
     TMS9918_setRegister(7,0x44);
     
     PSG_syncRegisters();
@@ -60,7 +60,7 @@ INLINE int start() {
 	    if (key==J_UP)    ayr_play(&chpn_op10_e12_mid,SEGMENT_C(chpn_op10_e12_mid));
 	    if (key==J_LEFT)  ayr_play(&theme_and_opening_credits_mid,SEGMENT_C(theme_and_opening_credits_mid));
 
-	    //ayFX_afb(inicio_juego_afb,SEGMENT_C(inicio_juego_afb),key>>4,15,0);
+	    ayFX_afb(inicio_juego_afb,SEGMENT_C(inicio_juego_afb),key>>4,15,0);
 	    EI();
 	    restore_page_b(oldSegmentPageB);    
 	}

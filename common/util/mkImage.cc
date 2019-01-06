@@ -14,26 +14,8 @@
 #include <functional>
 
 using namespace std::chrono_literals;
- 
-static const std::vector<cv::Vec3b> colorsRGB = {
-	{   0,    0,    0},
-	{  33,  200,   66},
-	{  94,  220,  120},
-	{  84,   85,  237},
-	{ 125,  118,  252},
-	{ 212,   82,   77},
-	{  66,  235,  245},
-	{ 252,   85,   84},
-	{ 255,  121,  120},
-	{ 212,  193,   84},
-	{ 230,  206,  128},
-	{  33,  176,   59},
-	{ 201,   91,  186},
-	{ 204,  204,  204},
-	{ 255,  255,  255}	
-};
 
-static const std::vector<cv::Vec3b> colors = {
+static const std::vector<cv::Vec3b> colors = { // Note, those are BGR
 	{   0,    0,    0},
 	{  66,  200,   33},
 	{ 120,  220,   94},
@@ -50,55 +32,6 @@ static const std::vector<cv::Vec3b> colors = {
 	{ 204,  204,  204},
 	{ 255,  255,  255}	
 };
-
-
-static std::pair<double,std::array<uint8_t,8>> colorize(
-	const cv::Vec3b src[8], 
-	cv::Vec3b target[8], 
-	std::vector<cv::Vec3b> &palette) {
-	
-	std::pair<double,std::array<uint8_t,8>> ret;
-	
-	ret.first = 0;
-	for (size_t i=0; i<8; i++) {
-		
-		double bestValue = 1e100;
-		for (size_t k=0; k<palette.size(); k++) {
-			double val = 
-				(int(src[i][0]) - palette[k][0]) * (int(src[i][0]) - palette[k][0]) +
-				(int(src[i][1]) - palette[k][1]) * (int(src[i][1]) - palette[k][1]) +
-				(int(src[i][2]) - palette[k][2]) * (int(src[i][2]) - palette[k][2])
-				;
-			if (val < bestValue) {
-				bestValue = val;
-				target[i] = palette[k];
-				ret.second[i] = k;
-			}
-		}
-		ret.first += bestValue;
-	}
-	return ret;
-}
-
-
-static std::pair<size_t,std::array<uint8_t,8>> quantize(
-	const cv::Vec3b src[8], 
-	cv::Vec3b target[8], 
-	std::vector<std::vector<cv::Vec3b>> &palettes) {
-
-	std::map<double,std::pair<size_t,std::array<uint8_t,8>>> scores;
-	
-	for (size_t j=0; j<palettes.size(); j++) {
-		
-		std::pair<double,std::array<uint8_t,8>> sp = colorize(src,target,palettes[j]);
-		scores[sp.first] = std::make_pair(j,sp.second);
-	}
-
-	colorize(src,target,palettes[scores.begin()->second.first]);
-
-	return scores.begin()->second;
-}
-
 
 std::vector<std::array<cv::Vec3b,2>> palette;
 std::vector<uint8_t> paletteCode;
@@ -135,51 +68,70 @@ struct Tile {
 	}
 };
 
-static std::pair<
-	cv::Mat2i,
-	std::map<size_t, Tile> > quantize0( const cv::Mat3b src, cv::Mat3b target) {
-		
+
+auto compmse = [](const cv::Vec3b &p0, const cv::Vec3b &p1, const cv::Vec3b &p2) {
 	
-	auto comp = [](const cv::Vec3b &p0, const cv::Vec3b &p1, const cv::Vec3b &p2) {
+	return	(p0[0]+p1[0]-2*p2[0])*(p0[0]+p1[0]-2*p2[0]) +
+			(p0[1]+p1[1]-2*p2[1])*(p0[1]+p1[1]-2*p2[1]) +
+			(p0[2]+p1[2]-2*p2[2])*(p0[2]+p1[2]-2*p2[2]);
+
+	/*double mse = 
+			std::pow(std::abs(p0[0]+p1[0]-2*p2[0]),2) +
+			std::pow(std::abs(p0[1]+p1[1]-2*p2[1]),2) +
+			std::pow(std::abs(p0[2]+p1[2]-2*p2[2]),2);
+
+	double mae = 
+			std::pow(std::abs(p0[0]+p1[0]-2*p2[0]),1) +
+			std::pow(std::abs(p0[1]+p1[1]-2*p2[1]),1) +
+			std::pow(std::abs(p0[2]+p1[2]-2*p2[2]),1);
+
+	double msqrte = 
+			std::pow(std::abs(p0[0]+p1[0]-2*p2[0]),0.5) +
+			std::pow(std::abs(p0[1]+p1[1]-2*p2[1]),0.5) +
+			std::pow(std::abs(p0[2]+p1[2]-2*p2[2]),0.5);
+
+	return mae*/;
+};
+
+auto bgr2yuv = [](const cv::Vec3b p) {
+	
+	uint8_t y = (29*p[0]+150*p[1]+77*p[2])>>8;
+	return cv::Vec3b(y, (128*256+125*(p[0]-y))>>8, (128*256+224*(p[2]-y))>>8);
+};
+
+auto compyuv = [](cv::Vec3b p0, cv::Vec3b p1, cv::Vec3b p2) {
+	
+	p0 = bgr2yuv(p0);
+	p1 = bgr2yuv(p1);
+	p2 = bgr2yuv(p2);
+	
+	
+	return	(p0[0]+p1[0]-2*p2[0])*(p0[0]+p1[0]-2*p2[0]) +
+			40*(p2[0]/256.)*(p0[1]+p1[1]-2*p2[1])*(p0[1]+p1[1]-2*p2[1]) +
+			40*(p2[0]/256.)*(p0[2]+p1[2]-2*p2[2])*(p0[2]+p1[2]-2*p2[2]);
+};
+
+
+auto comp = compyuv;
+
+static std::pair<cv::Mat2i, std::map<size_t, Tile>> quantize( const cv::Mat3b src, cv::Mat3b target) {
 		
-		return	(p0[0]+p1[0]-2*p2[0])*(p0[0]+p1[0]-2*p2[0]) +
-				(p0[1]+p1[1]-2*p2[1])*(p0[1]+p1[1]-2*p2[1]) +
-				(p0[2]+p1[2]-2*p2[2])*(p0[2]+p1[2]-2*p2[2]);
-	};
-
-
 	std::map<size_t, Tile> tiles;
-
-	std::vector<cv::Vec3b> colorCombos;
-	for (size_t i=0; i<colors.size(); i++)
-		for (size_t j=i; j<colors.size(); j++)
-			colorCombos.push_back(0.5*colors[i]+0.5*colors[i]);
-	
-	for (size_t i=0; i<colors.size(); i++) {
-		for (size_t j=i+1; j<colors.size(); j++) {
-			palette.emplace_back(std::array<cv::Vec3b,2>{colors[i],colors[j]});
-			paletteCode.emplace_back(16*(j  + 1) + i  + 1);			
-			paletteMap[paletteCode.back()] = palette.back();
-		}
-	}
-	
-	
-
 	for (size_t i=0; i<colors.size()-1; i++)
 		tiles[i] = Tile(0,240+i+1);
-	tiles[14] = Tile(255,254);
+	tiles[tiles.size()] = Tile(255,254);
 	
 	cv::Mat2i tileMap(src.rows/8,src.cols/8);
 	for (int i=0; i<src.rows; i+=8) {
+		
+		std::cerr << i << " out of " << src.rows << std::endl;
 		for (int j=0; j<src.cols; j+=8) {
 
-			Tile bestTile, bestBase;
+			cv::Vec2i selectedTiles;
 			double bestErrorTile = 1e100;
 
-			//for (int t=0; t<15; t++) { // Selects base tile;
-
-			cv::Vec3b backGround;
-			for (auto &bc : colorCombos) {
+			Tile bestTile;
+			for (int t=-1; t<15; t++) { // Selects base tile;
 
 				Tile tile;
 				double errorTile = 0;
@@ -192,12 +144,8 @@ static std::pair<
 						uint8_t pattern = 0;
 						for (int jj=0; jj<8; jj++) {
 							
-//							double v0 = comp(colors[t], palette[p][0], src(i+ii,j+jj));
-//							double v1 = comp(colors[t], palette[p][1], src(i+ii,j+jj));
-
-							double v0 = comp(bc, palette[p][0], src(i+ii,j+jj));
-							double v1 = comp(bc, palette[p][1], src(i+ii,j+jj));
-
+							double v0 = comp((t!=-1?colors[t]:palette[p][0]), palette[p][0], src(i+ii,j+jj));
+							double v1 = comp((t!=-1?colors[t]:palette[p][1]), palette[p][1], src(i+ii,j+jj));
 							if (v0<v1) {
 								pattern = (pattern<<1);
 								errorLine += v0;
@@ -219,13 +167,16 @@ static std::pair<
 				if (errorTile<bestErrorTile) {
 					bestErrorTile = errorTile;
 					bestTile = tile;
-					//bestBase = tiles[t];
-					backGround = bc;
+					selectedTiles[1] = t;
 				} 
 			}
 			
+			
+			
+			selectedTiles[0] = tiles.size(); 
+			if (selectedTiles[1] == -1) selectedTiles[1] = selectedTiles[0];
 			tiles[tiles.size()] = bestTile;
-			target(cv::Rect(j,i,8,8)) = cv::Mat3b(0.5*bestTile.img()) + cv::Mat3b(8,8,0.5*backGround);
+			target(cv::Rect(j,i,8,8)) = 0.5*tiles[selectedTiles[0]].img() + 0.5*tiles[selectedTiles[1]].img();
 		}
 	}
 	
@@ -241,53 +192,26 @@ static std::pair<
 	return std::make_pair(tileMap, tiles);
 
 }
-	
 
-static std::pair<
-	cv::Mat2i,
-	std::map<size_t, Tile> > quantize1( const cv::Mat3b src, cv::Mat3b target) {
-		
-	
-	auto comp = [](const cv::Vec3b &p0, const cv::Vec3b &p1, const cv::Vec3b &p2) {
-		
-		return	(p0[0]+p1[0]-2*p2[0])*(p0[0]+p1[0]-2*p2[0]) +
-				(p0[1]+p1[1]-2*p2[1])*(p0[1]+p1[1]-2*p2[1]) +
-				(p0[2]+p1[2]-2*p2[2])*(p0[2]+p1[2]-2*p2[2]);
-	};
-
+static std::pair<cv::Mat2i, std::map<size_t, Tile>> quantizeBasic( const cv::Mat3b src, cv::Mat3b target) {
 
 	std::map<size_t, Tile> tiles;
 
-	std::vector<cv::Vec3b> colorCombos;
-	for (size_t i=0; i<colors.size(); i++)
-		for (size_t j=i; j<colors.size(); j++)
-			colorCombos.push_back(0.5*colors[i]+0.5*colors[j]);
-	
-	for (size_t i=0; i<colors.size(); i++) {
-		for (size_t j=i+1; j<colors.size(); j++) {
-			palette.emplace_back(std::array<cv::Vec3b,2>{colors[i],colors[j]});
-			paletteCode.emplace_back(16*(j  + 1) + i  + 1);			
-			paletteMap[paletteCode.back()] = palette.back();
-		}
-	}
-	
-	
-
 	for (size_t i=0; i<colors.size()-1; i++)
 		tiles[i] = Tile(0,240+i+1);
-	tiles[14] = Tile(255,254);
+	tiles[tiles.size()] = Tile(255,254);
 	
 	cv::Mat2i tileMap(src.rows/8,src.cols/8);
 	for (int i=0; i<src.rows; i+=8) {
+		
+		std::cerr << i << " out of " << src.rows << std::endl;
 		for (int j=0; j<src.cols; j+=8) {
 
-			Tile bestTile, bestBase;
+			cv::Vec2i selectedTiles;
 			double bestErrorTile = 1e100;
 
-			//for (int t=0; t<15; t++) { // Selects base tile;
-
-			cv::Vec3b backGround;
-			for (auto &bc : colorCombos) {
+			Tile bestTile;
+			for (int t=-1; t<0; t++) { // Selects base tile;
 
 				Tile tile;
 				double errorTile = 0;
@@ -300,12 +224,8 @@ static std::pair<
 						uint8_t pattern = 0;
 						for (int jj=0; jj<8; jj++) {
 							
-//							double v0 = comp(colors[t], palette[p][0], src(i+ii,j+jj));
-//							double v1 = comp(colors[t], palette[p][1], src(i+ii,j+jj));
-
-							double v0 = comp(bc, palette[p][0], src(i+ii,j+jj));
-							double v1 = comp(bc, palette[p][1], src(i+ii,j+jj));
-
+							double v0 = comp((t!=-1?colors[t]:palette[p][0]), palette[p][0], src(i+ii,j+jj));
+							double v1 = comp((t!=-1?colors[t]:palette[p][1]), palette[p][1], src(i+ii,j+jj));
 							if (v0<v1) {
 								pattern = (pattern<<1);
 								errorLine += v0;
@@ -327,13 +247,14 @@ static std::pair<
 				if (errorTile<bestErrorTile) {
 					bestErrorTile = errorTile;
 					bestTile = tile;
-					//bestBase = tiles[t];
-					backGround = bc;
+					selectedTiles[1] = t;
 				} 
 			}
 			
+			selectedTiles[0] = tiles.size(); 
+			if (selectedTiles[1] == -1) selectedTiles[1] = selectedTiles[0];
 			tiles[tiles.size()] = bestTile;
-			target(cv::Rect(j,i,8,8)) = cv::Mat3b(0.5*bestTile.img()) + cv::Mat3b(8,8,0.5*backGround);
+			target(cv::Rect(j,i,8,8)) = 0.5*tiles[selectedTiles[0]].img() + 0.5*tiles[selectedTiles[1]].img();
 		}
 	}
 	
@@ -349,10 +270,224 @@ static std::pair<
 	return std::make_pair(tileMap, tiles);
 
 }
+
+static std::pair<cv::Mat2i, std::map<size_t, Tile>> quantizeBlur( const cv::Mat3b src, cv::Mat3b target) {
+		
+	std::map<size_t, Tile> tiles;
+
+	for (size_t i=0; i<colors.size()-1; i++)
+		tiles[i] = Tile(0,240+i+1);
+	tiles[tiles.size()] = Tile(255,254);
 	
+	cv::Mat2i tileMap(src.rows/8,src.cols/8);
+	for (int i=0; i<src.rows; i+=8) {
+		
+		std::cerr << i << " out of " << src.rows << std::endl;
+		for (int j=0; j<src.cols; j+=8) {
+
+			cv::Vec2i selectedTiles;
+			double bestErrorTile = 1e100;
+
+			Tile bestTile;
+			for (int t=-1; t<15; t++) { // Selects base tile;
+
+				Tile tile;
+				double errorTile = 0;
+				for (int ii=0; ii<8; ii++) { // Selects row;
+					
+					double bestErrorLine = 1e100;
+					for (size_t p=0; p<palette.size(); p++) {
+
+						double errorLine = 0;
+						uint8_t pattern = 0;
+						for (int jj=0; jj<8; jj++) {
+							
+							double v0 = comp((t!=-1?colors[t]:palette[p][0]), palette[p][0], src(i+ii,j+jj));
+							double v1 = comp((t!=-1?colors[t]:palette[p][1]), palette[p][1], src(i+ii,j+jj));
+							
+							cv::Vec3b inter = 
+								0.5*(v1/(v0+v1+1e-10)) * ( cv::Vec3d(palette[p][0]) + cv::Vec3d(t!=-1?colors[t]:palette[p][0])) +
+								0.5*(v0/(v0+v1+1e-10)) * ( cv::Vec3d(palette[p][1]) + cv::Vec3d(t!=-1?colors[t]:palette[p][1]));
+								
+							errorLine += 1*comp(inter, inter, src(i+ii,j+jj));
+							
+							if ((rand()&0xFFFF)/double(0xFFFF) <v1/(v0+v1+1e-10)) {
+								pattern = (pattern<<1);
+								errorLine += v0;
+							} else {
+								pattern = (pattern<<1) + 1;
+								errorLine += v1;
+							}
+						}
+						
+						if (errorLine<bestErrorLine) {
+							bestErrorLine = errorLine;
+							tile.pattern[ii] = pattern; 
+							tile.color[ii] = paletteCode[p];
+						}
+					}
+					errorTile += bestErrorLine;
+				}
+				
+				if (errorTile<bestErrorTile) {
+					bestErrorTile = errorTile;
+					bestTile = tile;
+					selectedTiles[1] = t;
+				} 
+			}
+			
+			
+			
+			selectedTiles[0] = tiles.size(); 
+			if (selectedTiles[1] == -1) selectedTiles[1] = selectedTiles[0];
+			tiles[tiles.size()] = bestTile;
+			target(cv::Rect(j,i,8,8)) = 0.5*tiles[selectedTiles[0]].img() + 0.5*tiles[selectedTiles[1]].img();
+		}
+	}
+	
+	{
+		
+		std::map<Tile, size_t> tt;
+		for (auto &t : tiles) 
+			tt[t.second]++;
+			
+		std::cout << "Size: " << tt.size() << " " << tiles.size() << std::endl;
+	}
+
+	return std::make_pair(tileMap, tiles);
+
+}
+
+static std::pair<cv::Mat2i, std::map<size_t, Tile>> quantizeFull( const cv::Mat3b src, cv::Mat3b target) {
+
+	std::map<size_t, Tile> tiles;
+	std::map<Tile, size_t> differentTiles;
+		
+	cv::Mat2i tileMap(src.rows/8,src.cols/8);
+	for (int i=0; i<src.rows; i+=8) {
+		
+		std::cerr << i << " out of " << src.rows << std::endl;
+		for (int j=0; j<src.cols; j+=8) {
+
+			cv::Vec2i &selectedTiles = tileMap(i/8,j/8);
+			double bestErrorTile = 1e100;
+
+			Tile tile0, tile1;
+			double errorTile = 0;
+			for (int ii=0; ii<8; ii++) { // Selects row;
+				
+				double bestErrorLine = 1e100;
+				for (size_t p0=0; p0<palette.size(); p0++) {
+				for (size_t p1=p0+1; p1<palette.size(); p1++) {
+
+					double errorLine = 0;
+					uint8_t pattern0 = 0, pattern1 = 0;
+					for (int jj=0; jj<8; jj++) {
+						
+						double v00 = 1.0*comp(palette[p0][0], palette[p1][0], src(i+ii,j+jj));
+						double v01 = 1.0*comp(palette[p0][0], palette[p1][1], src(i+ii,j+jj));
+						double v10 = 1.0*comp(palette[p0][1], palette[p1][0], src(i+ii,j+jj));
+						double v11 = 1.0*comp(palette[p0][1], palette[p1][1], src(i+ii,j+jj));
+						
+						double minError = std::min(std::min(v00,v01),std::min(v10,v11));
+						errorLine += minError;
+						
+						if        (v00 == minError) {
+							pattern0 = (pattern0<<1);
+							pattern1 = (pattern1<<1);
+						} else if (v01 == minError) {
+							pattern0 = (pattern0<<1);
+							pattern1 = (pattern1<<1) + 1;
+						} else if (v10 == minError) {
+							pattern0 = (pattern0<<1) + 1;
+							pattern1 = (pattern1<<1);
+						} else if (v11 == minError) {
+							pattern0 = (pattern0<<1) + 1;
+							pattern1 = (pattern1<<1) + 1;
+						}
+					}
+					
+					if (errorLine<bestErrorLine) {
+						bestErrorLine = errorLine;
+						tile0.pattern[ii] = pattern0; 
+						tile1.pattern[ii] = pattern1;
+						tile0.color[ii] = paletteCode[p0];
+						tile1.color[ii] = paletteCode[p1];
+					}
+				}
+				}
+				errorTile += bestErrorLine;
+			}
+			
+			if (not differentTiles.count(tile0))
+				differentTiles[tile0] = tiles.size();	
+			selectedTiles[0] = differentTiles[tile0];
+			tiles[selectedTiles[0]] = tile0;
+			
+			if (not differentTiles.count(tile1))
+				differentTiles[tile1] = tiles.size();	
+			selectedTiles[1] = differentTiles[tile1];
+			tiles[selectedTiles[1]] = tile1;
+		}
+	}
+	
+	if (true) {	
+		std::map<Tile, size_t> tt;
+		tt.clear();
+		for (auto &t : tiles) 
+			tt[t.second]++;
+
+		std::cout << "Size: " << tt.size() << " " << tiles.size() << std::endl;
+		
+		while (tt.size()>256) {
+
+			std::map<double, std::pair<size_t, size_t>> tileComp;
+			for (auto &t0 : tiles) 
+				for (auto &t1 : tiles) 
+					if (t0.first<t1.first)
+						tileComp[cv::norm(cv::Mat3d(t1.second.img())-cv::Mat3d(t0.second.img()))] = std::make_pair(t0.first,t1.first);
+				
+			for (auto &&tm : tileMap) 
+				if (tm[0]==tileComp.begin()->second.second)
+					tm[0]=tileComp.begin()->second.first;
+
+			for (auto &&tm : tileMap) 
+				if (tm[1]==tileComp.begin()->second.second)
+					tm[1]=tileComp.begin()->second.first;
+			
+			tiles.erase(tileComp.begin()->second.second);
+
+			tt.clear();
+			for (auto &t : tiles) 
+				tt[t.second]++;
+				
+			std::cout << "Size: " << tt.size() << " " << tiles.size() << " " << tileComp.begin()->first <<  std::endl;
+
+		};
+	}
+	
+	for (int i=0; i<src.rows; i+=8) {
+		for (int j=0; j<src.cols; j+=8) {
+			target(cv::Rect(j,i,8,8)) = 0.5*tiles[tileMap(i/8,j/8)[0]].img() + 0.5*tiles[tileMap(i/8,j/8)[1]].img();
+		}
+	}
 
 
+	return std::make_pair(tileMap, tiles);
 
+}
+
+
+typedef uint8_t TileIdx;
+
+typedef struct {
+	
+	uint8_t rows, cols;
+	uint8_t nCustomTiles;
+	Tile *customTiles;
+	TileIdx *data[2];
+} Image;
+	
 int main(int argc, char *argv[]) {
 	
 	if (argc!=2) {
@@ -361,153 +496,67 @@ int main(int argc, char *argv[]) {
 	}
 
 	cv::Mat3b img = cv::imread(argv[1]);
-	
-	if (img.rows%8) throw std::runtime_error("Row size not multiple of 8");
-	if (img.cols%8) throw std::runtime_error("Col size not multiple of 8");
+		
+	img = img(cv::Rect(0,0,img.cols&0xFFF8,img.rows&0xFFF8)).clone();
 	
 	std::cerr << img.rows << " " << img.cols << std::endl;
-	
-	cv::imshow("original", img);
-	
-	std::vector<std::vector<cv::Vec3b>> msx1palette;
-	std::vector<std::array<uint8_t,2>> msx1paletteValues;
+		
 	for (size_t i=0; i<colors.size(); i++) {
 		for (size_t j=i+1; j<colors.size(); j++) {
-			msx1palette.emplace_back(std::vector<cv::Vec3b>{colors[i],colors[j]});
-			msx1paletteValues.emplace_back(std::array<uint8_t,2> {
-				16*(j  + 1) + i  + 1,
-				0
-			});
+			palette.emplace_back(std::array<cv::Vec3b,2>{colors[i],colors[j]});
+			paletteCode.emplace_back(16*(j  + 1) + i  + 1);			
+			paletteMap[paletteCode.back()] = palette.back();
 		}
 	}
-
-	std::vector<std::vector<cv::Vec3b>> msx1dualpalette;
-	std::vector<std::array<uint8_t,2>> msx1dualpaletteValues;
-	for (size_t i=0; i<colors.size(); i++) {
-		for (size_t j=0; j<colors.size(); j++) {
-			for (size_t ii=0; ii<colors.size(); ii++) {
-				for (size_t jj=0; jj<colors.size(); jj++) {
-					if (i+jj < i+ii) continue;
-					if (j+ii < i+jj) continue;
-					if (j+jj < j+ii) continue;
-					msx1dualpalette.emplace_back(std::vector<cv::Vec3b>{
-						0.5*colors[i]+0.5*colors[ii],
-						0.5*colors[i]+0.5*colors[jj],
-						0.5*colors[j]+0.5*colors[ii],
-						0.5*colors[j]+0.5*colors[jj],
-					});
-					msx1dualpaletteValues.emplace_back(std::array<uint8_t,2> {
-						16*(j  + 1) + i  + 1,
-						16*(jj + 1) + ii + 1
-					});
-				}
-			}
-		}
-	}
-
-	std::vector<std::vector<cv::Vec3b>> msx1dualpalette2;
-	std::vector<std::array<uint8_t,2>> msx1dualpaletteValues2;
-	for (size_t i=0; i<colors.size(); i++) {
-		for (size_t j=0; j<colors.size(); j++) {
-			for (size_t ii=0; ii<colors.size(); ii++) {
-				for (size_t jj=0; jj<colors.size(); jj++) {
-					if (i+jj < i+ii) continue;
-					if (j+ii < i+jj) continue;
-					if (ii != jj) continue;
-					msx1dualpalette2.emplace_back(std::vector<cv::Vec3b>{
-						0.5*colors[i]+0.5*colors[ii],
-						0.5*colors[i]+0.5*colors[jj],
-						0.5*colors[j]+0.5*colors[ii],
-						0.5*colors[j]+0.5*colors[jj],
-					});
-					msx1dualpaletteValues2.emplace_back(std::array<uint8_t,2> {
-						16*(j  + 1) + i  + 1,
-						16*(jj + 1) + ii + 1
-					});
-				}
-			}
-		}
-	}
+	
 	
 	cv::Mat3b work = img.clone();
 	cv::Mat3b target;
-	
-	quantize0(img, work);
-	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-	cv::imshow("target", target); cv::waitKey(0);
-	quantize1(img, work);
-	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-	cv::imshow("target", target); cv::waitKey(0);
-	quantize0(img, work);
-	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-	cv::imshow("target", target); cv::waitKey(0);
-	quantize1(img, work);
-	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-	cv::imshow("target", target); cv::waitKey(0);
-	quantize0(img, work);
-	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-	cv::imshow("target", target); cv::waitKey(0);
-	quantize1(img, work);
-	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-	cv::imshow("target", target); cv::waitKey(0);
-	
-	volatile bool alive = true;
-	volatile int key=0;
-	std::thread t{[&](){
-		while (alive) {
-			cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
-			cv::imshow("target", target);
-			key = cv::waitKey(500);
-		}
-	}};
-			
-			
-	int status = 0;
-	while (true) {
-		
-		std::this_thread::sleep_for(100ms);
-		
-		if (key == -1) continue;
 
-		status = ((key&255)-'0')%10;
-		std::cout << status << std::endl;
-		
-		
-		typedef std::array<U8x8,2>  MTile;
-		std::map<MTile,int> tileCounts;
-
-		auto pv = msx1paletteValues;
-		if (status==2) pv = msx1dualpaletteValues;
-		if (status==3) pv = msx1dualpaletteValues2;
-
-		for (int i=0; i<img.rows; i+=8) {
-			for (int j=0; j<img.cols; j+=8) {
-				
-				MTile t0, t1;
-				for (int ii=0; ii<8; ii++) {
-					
-					std::pair<size_t,std::array<uint8_t,8>> Q;
-					if (status==1) Q = quantize(&img(i+ii,j), &work(i+ii,j), msx1palette);
-					if (status==2) Q = quantize(&img(i+ii,j), &work(i+ii,j), msx1dualpalette);
-					if (status==3) Q = quantize(&img(i+ii,j), &work(i+ii,j), msx1dualpalette2);
-						
-					t0[1][ii] = pv[Q.first][0];
-					t1[1][ii] = pv[Q.first][1];
-					for (int jj=0; jj<8; jj++) {
-						t0[0][ii] += (!!(Q.second[jj]&0x01))<<jj;
-						t1[0][ii] += (!!(Q.second[jj]&0x02))<<jj;
-					}
-				}
-				tileCounts[t0]++;
-				tileCounts[t1]++;
-			}
-		}
-		
-		std::cout << tileCounts.size() << std::endl;
-	}
+	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
+	cv::imshow("original", target);
 	
-		
 	
+	auto res = quantizeBlur(img, work);
+	cv::imwrite("out.png",work);	
+	std::cerr << res.first.rows * res.first.cols << " " << res.second.size()*sizeof(Tile) << std::endl;
+	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
+	cv::imshow("q_blur", target);	
+	cv::waitKey(0);
+
+/*	res = quantizeBlur2(img, work);
+	cv::imwrite("out.png",work);	
+	std::cerr << res.first.rows * res.first.cols << " " << res.second.size()*sizeof(Tile) << std::endl;
+	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
+	cv::imshow("q_blur", target);	
+	cv::waitKey(0);*/
+
+	res = quantize(img, work);
+	cv::imwrite("out.png",work);
+	
+	std::cerr << res.first.rows * res.first.cols << " " << res.second.size()*sizeof(Tile) << std::endl;
+	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
+	cv::imshow("q_noblur", target);
+	
+	cv::waitKey(0);
+
+	res = quantizeFull(img, work);
+	cv::imwrite("out.png",work);
+	
+	std::cerr << res.first.rows * res.first.cols << " " << res.second.size()*sizeof(Tile) << std::endl;
+	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
+	cv::imshow("q_full", target);
+	
+	cv::waitKey(0);
+
+	res = quantizeBasic(img, work);
+	cv::imwrite("out.png",work);
+	
+	std::cerr << res.first.rows * res.first.cols << " " << res.second.size()*sizeof(Tile) << std::endl;
+	cv::resize(work, target, cv::Size(), 4, 4, cv::INTER_NEAREST);
+	cv::imshow("q_basic", target);
+	
+	cv::waitKey(0);
 
 
 /*	std::string name = argv[1];
