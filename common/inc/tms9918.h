@@ -83,11 +83,22 @@ MODE2_PGPAGE_2 = 2}
 EM2_PGpage;
 
 typedef enum {
+MODE2_ENABLE_PGPAGE_0 = 0,
+MODE2_ENABLE_PGPAGE_01 = 1,
+MODE2_ENABLE_PGPAGE_02 = 2,
+MODE2_ENABLE_PGPAGE_012 = 3,
+}
+EM2_PGpage_Flags;
+
+typedef enum {
 MODE2_BUFFER_0 = 0,
 MODE2_BUFFER_1 = 1} 
 EM2_Buffer;
 
-void TMS9918_activateMode2 (bool use3CharPages);
+////////////////////////////////////////////////////////////////////////
+// High Level Interface
+
+void TMS9918_activateMode2 (EM2_PGpage_Flags pgPageFlags);
 void TMS9918_activateBuffer(EM2_Buffer buffer);
 
 ////////////////////////////////////////////////////////////////////////
@@ -97,7 +108,7 @@ typedef enum {
 TMS9918_M2 = 0x0002,
 TMS9918_EXTVID = 0x0001,
 TMS9918_MEM416K = 0x8000,
-TMS9918_BLANK = 0x4000,
+TMS9918_ENABLE = 0x4000,
 TMS9918_GINT = 0x2000,
 TMS9918_M1 = 0x1000,
 TMS9918_M3 = 0x0800,
@@ -137,7 +148,9 @@ typedef struct {
 TMS9918_Register;
 
 ////////////////////////////////////////////////////////////////////////
-// High Level Interface
+// Mid Level Interface
+
+void TMS9918_clear();
 
 void TMS9918_setFlags(TMS9918_TFlags flags);
 void TMS9918_memcpy(uint16_t dst, const uint8_t *src, uint16_t size);

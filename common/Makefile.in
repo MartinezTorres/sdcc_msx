@@ -41,17 +41,18 @@ all: out/msx/$(NAME).rom out/linux/$(NAME)
 # GENERATE FONTS
 FONTS_SRC := $(wildcard common/res/fonts/*.png) $(wildcard res/fonts/*.png)
 FONTS_GEN := $(patsubst %.png, tmp/%.c, $(FONTS_SRC))
+HEADERS      += $(patsubst %.png, tmp/inc/%.h, $(FONTS_SRC))
 SOURCES_C += $(FONTS_GEN)		
 .PHONY: fonts
 fonts: $(FONTS_GEN)
 	@true
 
-tmp/%.c: %.png tmp/common/util/mkFont
-	@#echo $(MSG)
-	@mkdir -p $(@D)
-	@tmp/common/util/mkFont $< > $@
+tmp/inc/%.h: %.png tmp/common/util/mkFont
+	@echo $(MSG)
+	@mkdir -p tmp/$(<D)
+	@tmp/common/util/mkFont $< > tmp/$*.c
 	@mkdir -p tmp/inc/$(<D)
-	@cproto -qve < $@ > tmp/inc/$*.h
+	@cproto -qve < tmp/$*.c > $@
 
 # GENERATE BINARIES
 BINARIES_SRC += $(shell find res/ -type f -name '*.afb')

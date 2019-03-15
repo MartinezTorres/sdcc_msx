@@ -1027,7 +1027,7 @@ int main(int argc, char *argv[]) {
 		//for (auto &m : data) Log(5) << m.size() << " " << compress(m).size();
 
 		oss << "// Music file generated from: " << name << ".mid" << std::endl;
-		oss << "#include <stdint.h>" << std::endl;
+		oss << "typedef unsigned char uint8_t;" << std::endl;
 		for (size_t j=0; j<data.size(); j++) {
 			auto &D = data[j];
 			oss << "static const uint8_t data" << char('A'+j) << "[] = {\n\t";

@@ -2,6 +2,12 @@
 
 static uint8_t tileOccupancyMap[3][32];
 
+////////////////////////////////////////////////////////////////////////
+// Tile Manager API
+//
+// Used to reserve and free tiles.
+//
+
 TileIdx M2_findFreeTile(EM2_PGpage pgpage) {
 
 	uint8_t i, val;
@@ -41,8 +47,60 @@ void    M2_freeAllTiles(EM2_PGpage pgpage) {
 	
 	M2_allocTile(pgpage,0); // Tile 0 is reserved for signaling the end of a message
 }
-
 /*
+
+
+////////////////////////////////////////////////////////////////////////
+// Monospace Font API
+//
+// Text API where each character belongs to a Tile.
+//
+
+//typedef struct {
+//	uint8_t conv[256];
+//}
+//T_MS_Font;
+
+void M2_MS_loadFont(
+	EM2_PGpage pgpage, 
+	const T_MS_Font *msFont, 
+	const TFont font, 
+	const U8x8 color, 
+	uint8_t min, uint8_t max) {
+	
+	register uint8_t i = min;
+	for (i=min, i<max; i++) {
+		TileIdx freeTile = M2_findFreeTile(pgpage);
+		TMS9918_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), font[i], 8);
+		TMS9918_memcpy(ADDRESS_CT + (((uint16_t)freeTile)<<3), color, 8);
+		msFont.idx[i] = freeTile;
+	}
+}
+
+void M2_MS_freeFont(EM2_PGpage pgpage, const T_MS_Font *msFont, char min, char max) {
+	
+	register uint8_t i = min;
+	for (i=min, i<max; i++) 
+		M2_freeTile(pgpage, msFont.idx[i]);
+}
+
+void M2_MS_print(EM2_Buffer buffer, const T_MS_Font *msFont, const char *msg, uint8_t x, uint8_t y) {
+	
+	uint8_t tiles[32];
+	register uint8_t l = 0;
+	{
+		register const char *src = msg;
+		register uint8_t *dst = &tiles[0];
+		while (TRUE) {
+			register uint8_t v = *src++;
+			if (v==0) break;
+			l++;
+			*dst++ = msFont.idx[v];
+		}
+	}
+	TMS9918_memcpy(baseAddress + x+(y<<5),tiles,l);
+}
+
 
 
 

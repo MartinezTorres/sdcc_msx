@@ -86,8 +86,7 @@ void ayr_init() { ayr_play(nullptr, 0); }
 
 void ayr_play(const AYR *ayr, uint8_t segment) {
 	
-	
-	
+	DI();
 	ZERO(ayr_registers,14);
 	
 	ayr_status.ayr = ayr;
@@ -106,7 +105,7 @@ void ayr_play(const AYR *ayr, uint8_t segment) {
 		
 		restore_page_c(oldSegmentPageC);    
 	}
-
+	EI();
 }
 
 INLINE bool ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {

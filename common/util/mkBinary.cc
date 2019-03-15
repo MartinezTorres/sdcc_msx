@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
 	
 
 	std::cout << "// Binary file generated from:" << argv[1] << std::endl;
-	std::cout << "#include <stdint.h>" << std::endl;
+	std::cout << "typedef unsigned char uint8_t;" << std::endl;
 	std::cout << "const uint8_t " << name << "[] = {" << std::endl;
 	size_t c = 0;
 	while (iff) {

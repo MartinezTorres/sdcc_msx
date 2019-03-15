@@ -2,17 +2,20 @@
 
 ////////////////////////////////////////////////////////////////////////
 // Mode2 Interface
-void TMS9918_activateMode2 (bool use3CharPages) {
 
-	TMS9918Status.flags = TMS9918_M2 | TMS9918_BLANK | TMS9918_GINT | TMS9918_MEM416K;
+void TMS9918_clear() {
+	
+	TMS9918_setFlags(TMS9918_M2 | TMS9918_GINT | TMS9918_MEM416K);
+	TMS9918_memset(0,0,16*1024);
+	TMS9918_setFlags(TMS9918_M2 | TMS9918_ENABLE | TMS9918_GINT | TMS9918_MEM416K);
+}
 
-	if (use3CharPages) {
-		TMS9918Status.ct6  = (MODE2_ADDRESS_CT  >>  6) | 0x7F; // 0b01111111 
-		TMS9918Status.pg11 = (((int16_t)MODE2_ADDRESS_PG)  >> 11) | 0x03; //0b00000011;
-	} else {
-		TMS9918Status.ct6  = (MODE2_ADDRESS_CT  >>  6) | 0x1F; //0b00011111;
-		TMS9918Status.pg11 = (((int16_t)MODE2_ADDRESS_PG)  >> 11) | 0x00; //0b00000000;
-	}
+void TMS9918_activateMode2 (EM2_PGpage_Flags pgPageFlags) {
+
+	TMS9918Status.flags = TMS9918_M2 | TMS9918_GINT | TMS9918_MEM416K;
+
+	TMS9918Status.ct6  = (MODE2_ADDRESS_CT  >>  6) | ( (pgPageFlags<<5) + 0x1F); // 0b01111111 
+	TMS9918Status.pg11 = (((int16_t)MODE2_ADDRESS_PG)  >> 11) | pgPageFlags; //0b00000011;
 	
 	TMS9918Status.pn10 =  MODE2_ADDRESS_PN0 >> 10;
 	TMS9918Status.sa7  =  MODE2_ADDRESS_SA0 >>  7;
@@ -28,6 +31,8 @@ void TMS9918_activateMode2 (bool use3CharPages) {
 	}
 		
 	TMS9918_memset(MODE2_ADDRESS_PN0, 0, sizeof(T_PN));
+	
+	void TMS9918_clear();
 }
 
 void TMS9918_activateBuffer(EM2_Buffer buffer) {
