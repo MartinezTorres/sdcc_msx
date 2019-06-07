@@ -1,0 +1,5 @@
+*.map
+/game/*/out
+/game/*/tmp
+/common/ext
+

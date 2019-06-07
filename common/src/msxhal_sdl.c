@@ -7,7 +7,7 @@
 
 ////////////////////////////////////////////////////////////////////////
 // VIDEO EMULATOR
-#include <tms9918.h>
+#include <tms99X8.h>
 
 typedef struct { uint8_t r,g,b; } RGB;
 static RGB framebuffer     [TEX_HEIGHT][TEX_WIDTH];
@@ -35,9 +35,9 @@ static const RGB colors[16] = {
 
 static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
 	
-	uint8_t pnMask = TMS9918Status.pg11 & 3;
-	uint8_t ctMask1 = (TMS9918Status.ct6>>5) & 3;
-	uint8_t ctMask2 = ((TMS9918Status.ct6&31)<<3)+7;
+	uint8_t pnMask = TMS99X8.pg11 & 3;
+	uint8_t ctMask1 = (TMS99X8.ct6>>5) & 3;
+	uint8_t ctMask2 = ((TMS99X8.ct6&31)<<3)+7;
 	
 	// TILES
 	for (int i=0; i<TILE_HEIGHT; i++) {
@@ -72,9 +72,9 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 
 			for (maxSprite=0; maxSprite<N_SPRITES && SA[maxSprite].y!=208 && nShownSprites<4; maxSprite++) {
 
-				uint8_t spriteLine = (i-SA[maxSprite].y-1) >> TMS9918Status.magnifySprites;
+				uint8_t spriteLine = (i-SA[maxSprite].y-1) >> TMS99X8.magnifySprites;
 				
-				if (spriteLine>=8 * (1+TMS9918Status.sprites16)) continue;
+				if (spriteLine>=8 * (1+TMS99X8.sprites16)) continue;
 				nShownSprites++;
 			}
 		}
@@ -82,22 +82,22 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 
 		for (int j=maxSprite; j>=0; j--) {
 
-			uint8_t spriteLine = (i-SA[j].y-1) >> TMS9918Status.magnifySprites;
+			uint8_t spriteLine = (i-SA[j].y-1) >> TMS99X8.magnifySprites;
 			
-			if (spriteLine>=8 * (1+TMS9918Status.sprites16)) continue;
+			if (spriteLine>=8 * (1+TMS99X8.sprites16)) continue;
 			
 			uint8_t pattern = SA[j].pattern;			
-			if (TMS9918Status.sprites16) pattern = (pattern & 252) + !!(spriteLine>7);
+			if (TMS99X8.sprites16) pattern = (pattern & 252) + !!(spriteLine>7);
 
 			int y = i;
 			int x = SA[j].x - (32*!!(SA[j].color&128));
 
-			for (int k=0; k<=TMS9918Status.sprites16; k++) {
+			for (int k=0; k<=TMS99X8.sprites16; k++) {
 
 				uint8_t p = SG[pattern+2*k][spriteLine%8];
 				for (int jj=0; jj<8; jj++) {
 					
-					for (int m=0; m<=TMS9918Status.magnifySprites; m++) {
+					for (int m=0; m<=TMS99X8.magnifySprites; m++) {
 
 						if (x>=0 && x<TILE_WIDTH*8 && (p&128) && (SA[j].color&0xF))
 							framebuffer[y][x]=colors[SA[j].color&0xF];
@@ -114,17 +114,16 @@ static inline void drawScreen() {
 
 	for (int i=0; i<TEX_HEIGHT; i++)
 		for (int j=0; j<TEX_WIDTH; j++)
-			framebuffer[i][j] = colors[TMS9918Status.backdrop];
-	return;
+			framebuffer[i][j] = colors[TMS99X8.backdrop];
 			
-	if (! TMS9918Status.blankScreen) return;
+	if (! TMS99X8.blankScreen) return;
 
-	if (TMS9918Status.mode2) {
-		const T_PN *PN = (const T_PN *)&TMS9918VRAM[(uint16_t)(TMS9918Status.pn10)<<10];
-		const T_CT *CT = (const T_CT *)&TMS9918VRAM[(uint16_t)(TMS9918Status.ct6&0x80)<< 6];
-		const T_PG *PG = (const T_PG *)&TMS9918VRAM[(uint16_t)(TMS9918Status.pg11&0xFC)<<11];
-		const T_SA *SA = (const T_SA *)&TMS9918VRAM[(uint16_t)(TMS9918Status.sa7 )<< 7];
-		const T_SG *SG = (const T_SG *)&TMS9918VRAM[(uint16_t)(TMS9918Status.sg11)<<11];
+	if (TMS99X8.mode2) {
+		const T_PN *PN = (const T_PN *)&TMS99X8VRAM[(uint16_t)(TMS99X8.pn10)<<10];
+		const T_CT *CT = (const T_CT *)&TMS99X8VRAM[(uint16_t)(TMS99X8.ct6&0x80)<< 6];
+		const T_PG *PG = (const T_PG *)&TMS99X8VRAM[(uint16_t)(TMS99X8.pg11&0xFC)<<11];
+		const T_SA *SA = (const T_SA *)&TMS99X8VRAM[(uint16_t)(TMS99X8.sa7 )<< 7];
+		const T_SG *SG = (const T_SG *)&TMS99X8VRAM[(uint16_t)(TMS99X8.sg11)<<11];
 
 		drawMode2(*PN, *CT, *PG, *SA, *SG); //only mode2 is supported
 	}
@@ -136,11 +135,18 @@ static inline void drawScreen() {
 ////////////////////////////////////////////////////////////////////////
 // IO FUNCTIONS
 
+volatile uint8_t interrupt_count;
+
+volatile bool enable_keyboard_routine;
+
 #define N_KEYS  8831
 static bool keys[N_KEYS];
+static uint8_t keyBuffer[40];
+static uint8_t keyBufferStart = 0;
+static uint8_t keyBufferEnd = 0;
 
 static inline void keyboard_init(void) {
-	memset(keys, 0, N_KEYS);
+	memset(keys, 0, sizeof(keys));
 }
 
 static inline void keyboard_update(SDL_Event e) {
@@ -148,6 +154,12 @@ static inline void keyboard_update(SDL_Event e) {
 	case SDL_KEYDOWN:
 		//printf("KEY PRESSED: %d\n",e.key.keysym.sym);
 		keys[e.key.keysym.sym%N_KEYS] = true;
+		if (e.key.keysym.sym && e.key.keysym.sym<128) {
+			keyBuffer[keyBufferEnd++] = e.key.keysym.sym;
+			if (keyBufferEnd==40) keyBufferEnd=0;
+			if (keyBufferEnd==keyBufferStart) keyBufferEnd++;
+			if (keyBufferStart==40) keyBufferStart=0;
+		}
 		break;
 	case SDL_KEYUP:
 		//printf("KEY RELEASED: %d\n",e.key.keysym.sym);
@@ -175,6 +187,15 @@ uint8_t msxhal_joystick_read(uint8_t joystickId) {
 	if (keys[SDLK_SPACE % N_KEYS]) joystickStatus[0] += J_SPACE;
 
 	return joystickStatus[joystickId]; 	
+}
+
+uint8_t msxhal_getch(void) { 
+	
+	uint8_t c = 0;
+	if (keyBufferEnd==keyBufferStart) return c;
+	c = keyBuffer[keyBufferStart++];
+	if (keyBufferStart==40) keyBufferStart=0;
+	return c;
 }
 
 
@@ -325,6 +346,8 @@ void wait_frame() {
 		printf("wait_frame called before init()\n");
 		exit(-1);
 	}
+
+	interrupt_count++;
 
 	if (custom_isr != nullptr)
 		(*custom_isr)();

@@ -8,10 +8,10 @@ static uint8_t tileOccupancyMap[3][32];
 // Used to reserve and free tiles.
 //
 
-TileIdx M2_findFreeTile(EM2_PGpage pgpage) {
-
+TileIdx Tiles_findAndAllocate(RowPageIdx rowPageIdx) {
+	
 	uint8_t i, val;
-	uint8_t *p = &tileOccupancyMap[pgpage][0];
+	uint8_t *p = &tileOccupancyMap[rowPageIdx][0];
 	
 	for (i=0; (i<32) && (*p==0xFF); i++, p++);
 	
@@ -23,29 +23,33 @@ TileIdx M2_findFreeTile(EM2_PGpage pgpage) {
 		i++;
 		val = val >> 1;
 	}
+	
+	Tiles_alloc(rowPageIdx, i);
 	return i;
 }
 
-void    M2_allocTile   (EM2_PGpage pgpage, TileIdx tileIdx) {
+void    Tiles_alloc   (RowPageIdx rowPageIdx, TileIdx tileIdx) {
 	
-	uint8_t *val = &tileOccupancyMap[pgpage][tileIdx>>3];
+	uint8_t *val = &tileOccupancyMap[rowPageIdx][tileIdx>>3];
 	*val = *val | (1<<(tileIdx&0x07));	
 }
 
-void    M2_freeTile    (EM2_PGpage pgpage, TileIdx tileIdx) {
+void    Tiles_free    (RowPageIdx rowPageIdx, TileIdx tileIdx) {
 
-	uint8_t *val = &tileOccupancyMap[pgpage][tileIdx>>3];
+	uint8_t *val = &tileOccupancyMap[rowPageIdx][tileIdx>>3];
 	*val = *val & ~(1<<(tileIdx&0x07));	
 }
 
-void    M2_freeAllTiles(EM2_PGpage pgpage) {
+void    Tiles_init() {
 	
-	uint8_t i=32;
-	uint8_t *p = &tileOccupancyMap[pgpage][0];
-	while (i--)
-		*p++ = 0;
-	
-	M2_allocTile(pgpage,0); // Tile 0 is reserved for signaling the end of a message
+	uint8_t j=0;
+	for (j=0; j<3; j++) {
+		uint8_t i=32;
+		uint8_t *p = &tileOccupancyMap[j][0];
+		while (i--)
+			*p++ = 0;
+		Tiles_alloc(j,0); // Tile 0 is reserved for signaling the end of a message
+	}
 }
 /*
 
@@ -121,7 +125,7 @@ static uint8_t writeShape(uintXX_t workArea[8], uint8_t freeTiles[256]) {
 	}
 	while (freeTile && freeTiles[freeTile]==0) freeTile++;
 
-	TMS9918_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
+	TMS99X8_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
 
 	freeTiles[freeTile] = 0;
 	return freeTile;
@@ -188,7 +192,7 @@ void initRenderedText(uint8_t *slim, uint8_t *bold, uint8_t freeTiles[256], cons
 }
 
 
-void TMS9918_printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *msg) {
+void TMS99X8_printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *msg) {
 
 	uint8_t tiles[32];
 	register uint8_t l = 0;
@@ -202,6 +206,6 @@ void TMS9918_printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *ms
 			*dst++ = ascii2tiles[v];
 		}
 	}
-	TMS9918_memcpy(baseAddress + x+(y<<5),tiles,l);
+	TMS99X8_memcpy(baseAddress + x+(y<<5),tiles,l);
 }
 */

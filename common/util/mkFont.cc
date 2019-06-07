@@ -41,8 +41,8 @@ int main(int argc, char *argv[]) {
 
 	std::cout << "// Font file generated from:" << name.substr(name.rfind('-')+1) << std::endl;
 	std::cout << "typedef unsigned char uint8_t;" << std::endl;
-	std::cout << "const uint8_t " << name << "[128][8] = {" << std::endl;
-	for (int i=0; i<128; i++) {
+	std::cout << "const uint8_t " << name << "[96][8] = {" << std::endl;
+	for (int i=32; i<128; i++) {
 		std::cout << std::hex << "\t {";
 		for (int j=0; j<8; j++) {
 			std::cout << (j?",":"");

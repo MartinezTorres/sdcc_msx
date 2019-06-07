@@ -51,7 +51,7 @@ T_AY_3_8910_Registers;
 
 extern T_AY_3_8910_Registers AY_3_8910_Registers;
 
-void PSG_initRegisters();
+void PSG_init();
 void PSG_syncRegisters();
 
 void ayFX_init();

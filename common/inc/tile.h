@@ -1,6 +1,6 @@
 #pragma once
 #include <msxhal.h>
-#include <tms9918.h>
+#include <tms99X8.h>
 
 ////////////////////////////////////////////////////////////////////////
 // Tile Manager API
@@ -9,12 +9,13 @@
 //
 typedef uint8_t TileIdx;
 
-TileIdx M2_findFreeTile(EM2_PGpage pgpage);
-void    M2_allocTile   (EM2_PGpage pgpage, TileIdx tileIdx);
-void    M2_freeTile    (EM2_PGpage pgpage, TileIdx tileIdx);
-void    M2_freeAllTiles(EM2_PGpage pgpage);
+void    Tiles_init();
+TileIdx Tiles_findAndAllocate(RowPageIdx rowPageIdx);
+void    Tiles_alloc   (RowPageIdx rowPageIdx, TileIdx tileIdx);
+void    Tiles_free    (RowPageIdx rowPageIdx, TileIdx tileIdx);
+INLINE void  Tiles_freeAll() { Tiles_init(); }
 
-
+/*
 ////////////////////////////////////////////////////////////////////////
 // Proportional Font API
 //
@@ -33,3 +34,4 @@ bool MODE2_PS_renderMsg(
 
 void M2_PS_freeMsg(TileIdx *msg);
 void M2_PS_print(EM2_Buffer buffer, uint8_t x, uint8_t y, TileIdx *msg);
+*/

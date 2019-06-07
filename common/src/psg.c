@@ -2,9 +2,9 @@
 
 T_AY_3_8910_Registers AY_3_8910_Registers;
 
-void PSG_initRegisters() {
+void PSG_init() {
 	
-	ZERO(AY_3_8910_Registers,14);
+	ZERO(&AY_3_8910_Registers,14);
 }
 
 #ifdef MSX
@@ -87,7 +87,7 @@ void ayr_init() { ayr_play(nullptr, 0); }
 void ayr_play(const AYR *ayr, uint8_t segment) {
 	
 	DI();
-	ZERO(ayr_registers,14);
+	ZERO(&ayr_registers,14);
 	
 	ayr_status.ayr = ayr;
 	ayr_status.segment = segment;

@@ -1,4 +1,18 @@
-#include <string.h>
+#include <msx_string.h>
+
+char *uint16ToString(char *msg, uint16_t v, uint8_t zeroPad) {
+	
+	register char *p = msg;
+	char c;
+	c = 0; while (v>10000) { c++; v-=10000; } if (c || (zeroPad>4)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>1000 ) { c++; v-=1000;  } if (c || (zeroPad>3)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>100  ) { c++; v-=100;   } if (c || (zeroPad>2)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>10   ) { c++; v-=10;    } if (c || (zeroPad>1)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>1    ) { c++; v-=1;     } *p++ = '0'+c;
+	*p++=0;
+	return msg;
+}
+
 
 /*
 
@@ -16,8 +30,8 @@ uint8_t addASCIITile(uint8_t freeTiles[256], uint8_t ascii, const U8x8 shape, co
 	uint8_t freeTile = 0;
 	while (freeTiles[freeTile]==0) freeTile++;
 	
-	TMS9918_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
-	TMS9918_memcpy(ADDRESS_CT + (((uint16_t)freeTile)<<3), color, 8);
+	TMS99X8_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
+	TMS99X8_memcpy(ADDRESS_CT + (((uint16_t)freeTile)<<3), color, 8);
 
 	freeTiles[freeTile] = 0;
 	ascii2tiles[ascii] = freeTile;
@@ -95,7 +109,7 @@ static uint8_t writeShape(uintXX_t workArea[8], uint8_t freeTiles[256]) {
 	}
 	while (freeTile && freeTiles[freeTile]==0) freeTile++;
 
-	TMS9918_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
+	TMS99X8_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
 
 	freeTiles[freeTile] = 0;
 	return freeTile;
@@ -162,7 +176,7 @@ void initRenderedText(uint8_t *slim, uint8_t *bold, uint8_t freeTiles[256], cons
 }
 
 
-void TMS9918_printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *msg) {
+void TMS99X8_printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *msg) {
 
 	uint8_t tiles[32];
 	register uint8_t l = 0;
@@ -176,7 +190,7 @@ void TMS9918_printStr(uint16_t baseAddress, uint8_t x, uint8_t y, const char *ms
 			*dst++ = ascii2tiles[v];
 		}
 	}
-	TMS9918_memcpy(baseAddress + x+(y<<5),tiles,l);
+	TMS99X8_memcpy(baseAddress + x+(y<<5),tiles,l);
 }
 
 */
