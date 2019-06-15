@@ -38,6 +38,7 @@ int main(void) {
 	M2_MS_printAt(mainFont, 0, 5, "This is a 50Hz MSX! Hello World!");
     }
     
+    // We also show a few sprites along the way :)
     {
 	const U8x8 sprites[] = { {
 	    0b00000000,
@@ -102,7 +103,7 @@ int main(void) {
 	for (i=25; i<32; i++)
 	    TMS99X8_writeSprite8(i,&sprites[3]);
 
-	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_0,SA0);
+	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_0,SA0); // We also use alternating buffers for the sprites.
 	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_1,SA1);
     }
 	
