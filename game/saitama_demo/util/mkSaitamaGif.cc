@@ -644,21 +644,44 @@ static std::vector<std::shared_ptr<ClusteredSourceImage::Node>>
 		float maxMerge = 1000,
 		size_t maxNodes = 64) {
 
+	size_t nNodes = nodes.size();
+
 	std::vector<int> erased(nodes.size()*2,0);
 	std::multimap<float, std::pair<size_t,size_t>> distances;
+	
+//	std::cerr << nodes.size() << std::endl;
+	
 	#pragma omp parallel for ordered schedule(dynamic,1)
 	for (size_t i=0; i<nodes.size(); i++) {
+		
+		if (erased[i]) continue;
 		for (size_t j=i+1; j<nodes.size(); j++) {
-			float dist = TC.compareBlock(nodes[i]->jpgBlock, nodes[j]->jpgBlock)*(nodes[i]->sz)*(nodes[j]->sz);
-			if (dist<maxMerge) {
+			
+			if (erased[j]) continue;
+			float dist = TC.compareBlock(nodes[i]->jpgBlock, nodes[j]->jpgBlock);
+			float distCompound = dist*(nodes[i]->sz)*(nodes[j]->sz);
+
+			if (dist<1) {
 				#pragma omp critical
-				distances.emplace(dist,	std::make_pair(i,j));
+				if (not erased[i] and not erased[j]) {
+					nodes[i] = std::make_shared<ClusteredSourceImage::Node>(nodes[i],nodes[j]);
+					erased[j] = 1;
+					nNodes--;
+//					std::cerr << ".";
+				}
+				break;
+			}
+
+			if (distCompound<maxMerge) {
+				#pragma omp critical
+				if (not erased[i] and not erased[j]) {
+					distances.emplace(distCompound,	std::make_pair(i,j));
+				}
 			}
 		}
 	}
 
 
-	size_t nNodes = nodes.size();
 	while (nNodes>1 and not distances.empty()) {
 				
 		auto f = distances.begin();
@@ -734,6 +757,25 @@ static std::string writeDataBlock(T begin, T end, std::string path, std::string 
 	header_common << "USING_PAGE_D("<<name<<");" << std::endl;
 	header_common << "extern const uint8_t " << name << "[" << sz << "];" << std::endl;
 	return name;
+}
+
+template<typename T>
+static std::string writeRawDataBlock(T begin, T end) {
+	
+	std::ostringstream oss;
+	int c=0,sz=0;
+	char msg[100];
+	while (begin!=end) {
+		sprintf(msg,"0x%02X,", *begin++);
+		oss << msg;
+		c++;
+		sz++;
+		if (c==16) {
+			oss << std::endl;
+			c=0;
+		}
+	}
+	return oss.str();
 }
 
 
@@ -911,7 +953,6 @@ int main(int argc, char *argv[]) {
 			}
 		}
 
-
 		{
 			
 			std::vector<int> patternStorage, colorStorage;
@@ -941,9 +982,24 @@ int main(int argc, char *argv[]) {
 			
 			int searchPtr[3] = {0,0,0};
 			
+			std::ofstream source_main(path+name+".c");
+			std::ofstream header_main(path+name+".h");
+			
 			header_common.open(path+name+"_gen.h");
 			header_common << "#pragma once" << std::endl;
 			header_common << "#include <gif_v00.h>" << std::endl;
+			
+			
+			source_main << "#include \"" << name << "_gen.h\"" << std::endl;
+			source_main << "#include \"" << name << ".h\"" << std::endl;
+			source_main << "void " << name << "_play() {" << std::endl;
+			source_main << "    gif_v00_initVideo();" << std::endl;
+			
+			header_main << "#pragma once" << std::endl;
+			header_main << "#include <gif_v00.h>" << std::endl;
+			header_main << "void " << name << "_play();" << std::endl;
+			
+			std::map<std::string,int> accessPatterns;
 			
 			
 			for (uint k=0; k<tiledImages.size(); k++) {
@@ -956,7 +1012,7 @@ int main(int argc, char *argv[]) {
 				std::vector<int> newNameTables(256*3,-1); 
 				
 				cv::Mat4i &tiledImage = tiledImages[k];
-				for (int i=0; i<tiledImage.rows; i++) {
+/*				for (int i=0; i<tiledImage.rows; i++) {
 					for (int j=0; j<tiledImage.cols; j++) {
 						
 						int patternIndex = nameTables[i*32+j] + (i/8)*256;
@@ -970,24 +1026,23 @@ int main(int argc, char *argv[]) {
 							patternsInUse[patternIndex]++;
 						}
 					}
-				}
-				
-				
-				std::cout << tiledImage.rows << std::endl;
+				}*/
+
 				for (int i=0; i<tiledImage.rows; i++) {
 					for (int j=0; j<tiledImage.cols; j++) {
-						if (newNameTables[i*32+j]!=-1) continue;
+					//	if (newNameTables[i*32+j]!=-1) continue;
 						
 						
 						int patternIndex = (i/8)*256;
 						bool found = false;
-						for (int l=0; not found and l<128; l++) {
+						for (int l=0; l<128; l++) {
 							if (
 								patternTables[patternIndex    ]==tiledImage(i,j)[0] and
 								colorTables  [patternIndex    ]==tiledImage(i,j)[1] and
 								patternTables[patternIndex+128]==tiledImage(i,j)[2] and
 								colorTables  [patternIndex+128]==tiledImage(i,j)[3]) {
 								found = true;
+								break;
 							}
 							patternIndex++;
 						}
@@ -1040,12 +1095,17 @@ int main(int argc, char *argv[]) {
 				{
 					char frameNr[100]; sprintf(frameNr,"%05d",k);
 					std::ofstream file_frame_main(path+name+frameNr+".c");
-					header_common << "void " << name << frameNr << "();" << std::endl;
+					header_common << "void " << name << frameNr << "_sendPatterns();" << std::endl;
+
+					header_common << "USING_PAGE_C("<<name << frameNr<<");" << std::endl;
+					source_main << "    " << "fast_load_page_c(SEGMENT_C("<<name<<frameNr<<")); " << name << frameNr << "_sendPatterns(); " << "gif_v00_sendPatternNames(" << name << frameNr << "_patternNames);" << std::endl;
 					
 					file_frame_main << "#include \"" << name << "_gen.h\"" << std::endl;
 					
 
-					file_frame_main << "static void " << name << frameNr << "_sendPatterns(){" << std::endl;
+					file_frame_main << "void " << name << frameNr << "_sendPatterns() {" << std::endl;
+					file_frame_main << "    gif_v00_sendPatternsInit();" << std::endl;
+					
 					
 					for (int i=0; i<4; i++) {
 						
@@ -1069,17 +1129,95 @@ int main(int argc, char *argv[]) {
 							transferName = "colorStorage";
 							transmitBaseAddress = 0x2000;
 						}
+						
+						
+						struct T_TransferItem {
 							
-						int nCopies = 0;
+							int patternAddress, psgAddress, patternSegment;							
+						};
+						std::vector<T_TransferItem> transferItems;
+						for (auto &t : transferData) {
+							
+							T_TransferItem tt;
+							tt.patternAddress = t.second*8;
+							tt.psgAddress = transmitBaseAddress + t.first*8;
+							tt.patternSegment = tt.patternAddress/8192;
+							transferItems.push_back(tt);
+						}
+						
+						std::sort(transferItems.begin(), transferItems.end(), [](const T_TransferItem &lhs, const T_TransferItem &rhs){
+							if (lhs.psgAddress!=rhs.psgAddress) return lhs.psgAddress<rhs.psgAddress;
+							if (lhs.patternSegment!=rhs.patternSegment) return lhs.patternSegment<rhs.patternSegment;
+							if (lhs.patternAddress!=rhs.patternAddress) return lhs.patternAddress<rhs.patternAddress;
+							return lhs.patternAddress<rhs.patternAddress;
+						});
+						
+						{
+							T_TransferItem last;
+							last.patternSegment = -1;
+							last.patternAddress = -1;
+							last.psgAddress = -1;
+							
+							std::string accessPattern = "";
+							for (auto &t: transferItems) {
+
+								if (last.patternSegment != t.patternSegment) {
+									accessPatterns[accessPattern]++; 
+									accessPatterns["S"]++; 
+									accessPattern = "";
+								}
+								
+								if (last.psgAddress + 16 == t.psgAddress) {
+									accessPatterns[accessPattern]++;
+									accessPattern = "v";
+									
+								} else if (last.psgAddress + 8 != t.psgAddress) {
+									accessPatterns[accessPattern]++; 
+									accessPatterns["V"]++; 
+									accessPattern = "";
+								}
+
+								if        (last.patternAddress    == t.patternAddress) {
+									accessPattern += "-";
+								} else if (last.patternAddress + 8 == t.patternAddress) {
+									accessPattern += "0";
+								} else if (last.patternAddress + 16 == t.patternAddress) {
+									accessPattern += "+";
+								} else {
+									accessPatterns[accessPattern]++; 
+									accessPatterns["A"]++; 
+									accessPattern = "";									
+								}
+								last = t;
+							}
+							accessPatterns[accessPattern]++; 
+						}
+						
+						
+							
+/*						int nCopies = 0;
 						auto pushCopies = [&]() {
 							while (nCopies) {
-								if (nCopies>8) {
-									file_frame_main << "gif_v00_copy8();" << std::endl;
-									nCopies -= 8;
-									continue;
+								if (nCopies>16) {
+									file_frame_main << "    gif_v00_copy16();" << std::endl;
+									nCopies -= 16;
+								} else {
+									file_frame_main << "    gif_v00_copy" << nCopies << "();" << std::endl;
+									nCopies = 0;
 								}
-								file_frame_main << "gif_v00_copy" << nCopies << "();" << std::endl;
-								nCopies = 0;
+							}
+						};
+
+						int nCopiesInc = 0;
+						auto pushCopiesInc = [&]() {
+							while (nCopiesInc) {
+								if (nCopiesInc>16) {
+									file_frame_main << "    gif_v00_copy_inc15();" << std::endl;
+									nCopiesInc -= 15;
+								} else {
+									file_frame_main << "    gif_v00_copy_inc" << nCopiesInc << "();" << std::endl;
+									nCopiesInc = 0;
+								}
 							}
 						};
 						
@@ -1091,94 +1229,64 @@ int main(int argc, char *argv[]) {
 							
 							int patternAddress = t.second*8;
 							int psgAddress = transmitBaseAddress + t.first*8;
-							if (currentSegment != patternAddress/8192) {
-								currentSegment = patternAddress/8192;
-								pushCopies();
-								file_frame_main << "fast_load_page_d(SEGMENT_D("<<strprintf(name+transferName+"%05d",currentSegment)<<"));"<< std::endl;
-							}
 							if (currentPSGAddress!=psgAddress) {
 								currentPSGAddress = psgAddress;
 								pushCopies();
-								file_frame_main << "gif_v00_setTargetAddress("<<currentPSGAddress<<");"<< std::endl;
+								pushCopiesInc();
+								file_frame_main << "    gif_v00_setTargetAddress("<<currentPSGAddress<<");"<< std::endl;
+							}
+							if (currentSegment != patternAddress/8192) {
+								currentSegment = patternAddress/8192;
+								pushCopies();
+								pushCopiesInc();
+								file_frame_main << "    gif_v00_load_page_d("<<strprintf(name+transferName+"%05d",currentSegment)<<");"<< std::endl;
 							}
 							patternAddress = patternAddress % 8192;
-							if (currentPatternAddress!=patternAddress) {
-								currentPatternAddress = patternAddress;
+							
+							if (currentPatternAddress==patternAddress) {
+								pushCopiesInc();
+								nCopies++;
+							} else if (currentPatternAddress+8==patternAddress) {
+								if (nCopies==1) {
+									nCopies=0;
+									nCopiesInc=2;
+								} else {
+									pushCopies();
+									nCopies++;									
+								}
+							} else {
 								pushCopies();
-								file_frame_main << "gif_v00_setSourceAddress("<<currentPatternAddress<<");" << std::endl;
+								pushCopiesInc();
+								currentPatternAddress = patternAddress;
+								file_frame_main << "    gif_v00_setSourceAddress("<<strprintf(name+transferName+"%05d",currentSegment)<<","<<currentPatternAddress<<");" << std::endl;
+								nCopies++;
 							}
-							nCopies++;
-							currentPatternAddress += 16;
+							currentPatternAddress = patternAddress+8;				
 							currentPSGAddress +=8;
 							currentPatternAddress = currentPatternAddress % 8192;
 						}
 						pushCopies();
+						pushCopiesInc();*/
 					}
-					file_frame_main << "}" << std::endl;
+					file_frame_main << "    gif_v00_sendPatternsEnd();" << std::endl;
+					file_frame_main << "}" << std::endl << std::endl;
 
-					file_frame_main << "static void " << name << frameNr << "_sendPatternNames() {" << std::endl;
 
-					for (int i=0; i<24; i++) {
-						
-						std::vector<int> line(&newNameTables[i*32],&newNameTables[i*32+32]);
-						
-						if (not knownNameTableLines.count(line))
-							knownNameTableLines[line] = writeDataBlock(&newNameTables[i*32],&newNameTables[i*32+32], path, name+frameNr+"line%02d",i);
-
-						std::string dataName = knownNameTableLines[line];
-						
-						file_frame_main << "fast_load_page_d(SEGMENT_D("<<dataName<<"));"<< std::endl;
-						file_frame_main << "gif_v00_fillNameTableRow("<<dataName<<");" << std::endl;
-					}
-					
-					file_frame_main << "}" << std::endl;
-					
-					file_frame_main << "void " << name << frameNr << "() {" << std::endl;
-					file_frame_main << "  " << name << frameNr << "_sendPatterns();" << std::endl;
-					file_frame_main << "  " << "while (frames_left) HALT();" << std::endl;
-					file_frame_main << "  " << "frames_left = 1;" << std::endl;
-					file_frame_main << "  " << "if (hz==50) {" << std::endl;
-					file_frame_main << "      gif_v00_setTargetAddress(MODE2_ADDRESS_PN0);" << std::endl;
-					file_frame_main << "      gif_v00_setNameTableOffset(0);" << std::endl;
-					file_frame_main << "      " << name << frameNr << "_sendPatternNames();" << std::endl;
-					file_frame_main << "      " << "while (frames_left) HALT();" << std::endl;
-					file_frame_main << "      " << "frames_left = 3;" << std::endl;
-					file_frame_main << "      gif_v00_setTargetAddress(MODE2_ADDRESS_PN1);" << std::endl;
-					file_frame_main << "      gif_v00_setNameTableOffset(128);" << std::endl;
-					file_frame_main << "      " << name << frameNr << "_sendPatternNames();" << std::endl;
-					file_frame_main << "  " << "} else {" << std::endl;
-					if (k%2) {
-						file_frame_main << "      gif_v00_setTargetAddress(MODE2_ADDRESS_PN0);" << std::endl;
-						file_frame_main << "      gif_v00_setNameTableOffset(0);" << std::endl;
-						file_frame_main << "      " << name << frameNr << "_sendPatternNames();" << std::endl;
-						file_frame_main << "      " << "while (frames_left) HALT();" << std::endl;
-						file_frame_main << "      " << "frames_left = 4;" << std::endl;
-						file_frame_main << "      gif_v00_setTargetAddress(MODE2_ADDRESS_PN1);" << std::endl;
-						file_frame_main << "      gif_v00_setNameTableOffset(128);" << std::endl;
-						file_frame_main << "      " << name << frameNr << "_sendPatternNames();" << std::endl;
-					} else {
-						file_frame_main << "      gif_v00_setTargetAddress(MODE2_ADDRESS_PN1);" << std::endl;
-						file_frame_main << "      gif_v00_setNameTableOffset(128);" << std::endl;
-						file_frame_main << "      " << name << frameNr << "_sendPatternNames();" << std::endl;
-						file_frame_main << "      " << "while (frames_left) HALT();" << std::endl;
-						file_frame_main << "      " << "frames_left = 4;" << std::endl;
-						file_frame_main << "      gif_v00_setTargetAddress(MODE2_ADDRESS_PN0);" << std::endl;
-						file_frame_main << "      gif_v00_setNameTableOffset(0);" << std::endl;
-						file_frame_main << "      " << name << frameNr << "_sendPatternNames();" << std::endl;
-					}
-					file_frame_main << "  " << "}" << std::endl;
-					
-					
-					file_frame_main << "}" << std::endl;
+					file_frame_main << "const uint8_t " << name << frameNr << "_patternNames[" << 24*32 << "] = {" << std::endl;
+					file_frame_main << writeRawDataBlock(&newNameTables[0],&newNameTables[24*32]) << "};" << std::endl;
+					header_common << "extern const uint8_t " << name << frameNr << "_patternNames[" << 24*32 << "];" << std::endl;
 					
 					
 				}
 				
-				
-				
-				
 				nameTables = newNameTables;
 			}
+
+				for (auto &a : accessPatterns) {
+					if (a.first != "" and a.second>10) {
+						std::cerr << a.first << ": " << a.second << std::endl;
+					}
+				}
 		
 			for (size_t i=0; i<patternStorage.size(); i+=1024) {
 				std::vector<uint8_t> t;
@@ -1194,6 +1302,9 @@ int main(int argc, char *argv[]) {
 						t.push_back(v);
 				writeDataBlock(t.begin(),t.end(), path, name+"colorStorage"+"%05d",i/1024);
 			}
+
+			source_main << "    gif_v00_deinitVideo();" << std::endl;
+			source_main << "}" << std::endl;
 
 		}
 	}

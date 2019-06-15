@@ -52,6 +52,13 @@ void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
 	}
 		
 	TMS99X8_memset(MODE2_ADDRESS_PN0, 0, sizeof(T_PN));
+	TMS99X8_memset(MODE2_ADDRESS_PN1, 0, sizeof(T_PN));
+	TMS99X8_memset(MODE2_ADDRESS_SA0, 208, sizeof(T_PN));
+	TMS99X8_memset(MODE2_ADDRESS_SA1, 208, sizeof(T_PN));
+//	SA0[0].y = 208;
+//	SA1[1].y = 208;
+//	TMS99X8_writeSpriteAttributes(0,SA0);
+//	TMS99X8_writeSpriteAttributes(1,SA1);
 	
 	TMS99X8_clear();
 }
@@ -75,6 +82,9 @@ void TMS99X8_activateBuffer(EM2_Buffer buffer) {
 
 ////////////////////////////////////////////////////////////////////////
 // High Level Interface
+
+
+T_SA SA0, SA1;
 
 void TMS99X8_setFlags(TMS99X8_TFlags flags) {
 	
@@ -158,6 +168,10 @@ void TMS99X8_writeSprite16(uint8_t pos, U16x16 s) {
 	TMS99X8_memcpy(MODE2_ADDRESS_SG+(((uint16_t)pos)<<3), (const uint8_t *)s, 32);
 }
 
+void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, T_SA sa) {
+	
+	TMS99X8_memcpy(buffer?MODE2_ADDRESS_SA1:MODE2_ADDRESS_SA0, (const uint8_t *)sa, sizeof(T_SA));
+}
 
 ////////////////////////////////////////////////////////////////////////
 // Low Level Interface

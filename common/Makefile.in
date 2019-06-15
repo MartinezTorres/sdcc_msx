@@ -14,7 +14,7 @@ MSG = "\033[1;32m[$(@)]\033[1;31m\033[0m"
 
 CCZ80 = sdcc
 ASM = sdasz80
-OPENMSX = openmsx -machine C-BIOS_MSX2  -carta 
+OPENMSX = openmsx -machine C-BIOS_MSX1  -carta 
 HEXBIN = makebin -s 4194304
 
 INCLUDES = -Itmp/inc -Iinc -Icommon/inc

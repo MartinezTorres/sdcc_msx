@@ -212,7 +212,7 @@ static SDL_Texture* tex = nullptr;
 
 #include <ay8912.h>
 #include <psg.h>
-ayemu_ay_t ay;
+static ayemu_ay_t ay;
 static void fill_audio(void *reg, uint8_t *stream, int len) {
 	
 	ayemu_set_regs  (&ay, reg);
@@ -329,14 +329,16 @@ void msxhal_init() {
 	keyboard_init();
 	
 	SDL_is_initialized = true;
-	
 }
 
-static void (*custom_isr)(void);
-void msxhal_install_isr(void (*new_isr)(void)) {
+static isr_function custom_isr;
+isr_function msxhal_install_isr(isr_function new_isr) {
 	
+	isr_function old = custom_isr;
 	custom_isr = new_isr;
+	return old;
 }
+
 
 
 void wait_frame() {

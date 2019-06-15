@@ -146,6 +146,8 @@ TMS99X8_Register;
 ////////////////////////////////////////////////////////////////////////
 // Mid Level Interface
 
+extern T_SA SA0, SA1;
+
 void TMS99X8_clear();
 
 void TMS99X8_setFlags(TMS99X8_TFlags flags);
@@ -154,6 +156,8 @@ void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size);
 
 void TMS99X8_writeSprite8(uint8_t pos, U8x8 s);
 void TMS99X8_writeSprite16(uint8_t pos, U16x16 s);
+
+void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, T_SA sa);
 
 ////////////////////////////////////////////////////////////////////////
 // Low Level Interface

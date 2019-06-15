@@ -203,7 +203,67 @@ uint8_t msxhal_joystick_read(uint8_t joystickId);
 uint8_t msxhal_getch(); //Non blocking red character from buffer.
 
 ////////////////////////////////////////////////////////////////////////
-// CORE FUNCTIONS
+// MSX INFO FUNCTIONS
+
+enum    { 
+	MSX_CHARACTER_SET_JAPANESE=0x00,
+	MSX_CHARACTER_SET_ASCII=0x01,
+	MSX_CHARACTER_SET_KOREAN=0x02,
+
+	MSX_DATE_FORMAT_YMD=0x00,
+	MSX_DATE_FORMAT_MDY=0x10,
+	MSX_DATE_FORMAT_DMY=0x20,
+
+	MSX_FREQUENCY_60HZ=0x00,
+	MSX_FREQUENCY_50HZ=0x80,
+
+	MSX_KEYBOARD_TYPE_JAPANESE=0x00,
+	MSX_KEYBOARD_TYPE_INTERNATIONAL=0x01,
+	MSX_KEYBOARD_TYPE_FRENCH=0x02,
+	MSX_KEYBOARD_TYPE_UK=0x03,
+	MSX_KEYBOARD_TYPE_GERMAN=0x04,
+
+	MSX_BASIC_VERSION_JAPANESE=0x00,
+	MSX_BASIC_VERSION_INTERNATIONAL=0x10,
+	
+	MSX_VERSION_MSX1=0x00,
+	MSX_VERSION_MSX2=0x01,
+	MSX_VERSION_MSX2P=0x02,
+	MSX_VERSION_MSXTR=0x03
+
+};
+
+
+#ifdef MSX
+
+	#define BIOS_IDBYT1 (*(const uint8_t*)0x002B)
+	#define BIOS_IDBYT2 (*(const uint8_t*)0x002C)
+	#define BIOS_ROMID  (*(const uint8_t*)0x002D)
+
+#elif LINUX
+
+	#define BIOS_IDBYT1 (MSX_CHARACTER_SET_ASCII+MSX_DATE_FORMAT_DMY+MSX_FREQUENCY_60HZ)
+	#define BIOS_IDBYT2 (MSX_KEYBOARD_TYPE_INTERNATIONAL+MSX_BASIC_VERSION_INTERNATIONAL)
+	#define BIOS_ROMID  (MSX_VERSION_MSX1)
+
+#endif
+
+
+INLINE uint8_t msxhal_get_character_set() { return BIOS_IDBYT1 & 0x0F; }
+INLINE uint8_t msxhal_get_date_format()   { return BIOS_IDBYT1 & 0x70; }
+INLINE uint8_t msxhal_get_interrupt_frequency() { return BIOS_IDBYT1 & 0x80; }
+INLINE uint8_t msxhal_get_keyboard_type() { return BIOS_IDBYT2 & 0x0F; }
+INLINE uint8_t msxhal_get_basic_version() { return BIOS_IDBYT2 & 0xF0; }
+INLINE uint8_t msxhal_get_msx_version()   { return BIOS_ROMID; }
+
+////////////////////////////////////////////////////////////////////////
+// ISR FUNCTIONS
+
+typedef void (*isr_function)();
+isr_function msxhal_install_isr(isr_function);
+
+////////////////////////////////////////////////////////////////////////
+// INIT FUNCTIONS
 void msxhal_init();
-void msxhal_install_isr(void (*)());
+
 

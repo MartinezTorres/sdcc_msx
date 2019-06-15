@@ -13,13 +13,13 @@ volatile uint8_t interrupt_count;
 
 volatile bool enable_keyboard_routine;
 
-static void (*custom_isr)(void);
+static isr_function custom_isr;
 void msx_hal_isr(void) { 
 
 	interrupt_count++;
 
 	if (custom_isr != nullptr)
-		(*custom_isr)();
+		(*custom_isr)();		
 
 	//enable_keyboard_routine = false;
 	if (!enable_keyboard_routine) {
@@ -27,11 +27,13 @@ void msx_hal_isr(void) {
 	}
 }
 
-void msxhal_install_isr(void (*new_isr)(void)) {
+isr_function msxhal_install_isr(isr_function new_isr) {
 	
-	DI();	
+	register isr_function old = custom_isr;
+	DI();
 	custom_isr = new_isr;
 	EI();
+	return old;
 }
 
 void msxhal_init() {
