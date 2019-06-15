@@ -519,7 +519,7 @@ int main(int argc, char *argv[]) {
 	
 	// Generate area map
 	{
-		std::ofstream off("areas.map");
+		std::ofstream off(romName + ".areas.map");
 		off << "AREA MAP: " << std::endl;
 		off << "# SG #  MAP #  ROM  # SIZE #   NAME   #   PAGE A   #   PAGE B   #   PAGE C   #   PAGE D   #" << std::endl;
 		off << "###########################################################################################" << std::endl;
@@ -557,7 +557,7 @@ int main(int argc, char *argv[]) {
 
 	// Generate symbols map
 	{
-		std::ofstream off("symbols.map");
+		std::ofstream off(romName + ".symbols.map");
 		off << "Symbols MAP: " << std::endl;
 		off << "# SG #  MAP #  ROM  #  MODULE  #        PAGE A        #        PAGE B        #        PAGE C        #        PAGE D        #" << std::endl;
 		off << "############################################################################################################################" << std::endl;
@@ -617,7 +617,7 @@ int main(int argc, char *argv[]) {
 	}
 	
 	// DO EXTRACT THE CODE
-	std::vector<uint8_t> rom(0x24000,0xff);
+	std::vector<uint8_t> rom(0x20000,0xff);
 	for (auto &rel : rels) {		
 		if (not rel.enabled) continue;
 		

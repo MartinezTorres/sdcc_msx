@@ -154,10 +154,10 @@ void TMS99X8_setFlags(TMS99X8_TFlags flags);
 void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size);
 void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size);
 
-void TMS99X8_writeSprite8(uint8_t pos, U8x8 s);
-void TMS99X8_writeSprite16(uint8_t pos, U16x16 s);
+void TMS99X8_writeSprite8(uint8_t pos, const U8x8 s);
+void TMS99X8_writeSprite16(uint8_t pos, const U16x16 s);
 
-void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, T_SA sa);
+void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa);
 
 ////////////////////////////////////////////////////////////////////////
 // Low Level Interface
@@ -169,7 +169,7 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	__sfr __at 0x99 VDP1;
 	TMS99X8_Register __at 0xF3DF TMS99X8;
 
-	inline void TMS99X8_syncRegister(uint8_t reg) {
+	INLINE void TMS99X8_syncRegister(uint8_t reg) {
 
 		VDP1 = TMS99X8.reg[reg];
 		NOP();
@@ -177,12 +177,40 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 		NOP();
 	}
 
+	INLINE void TMS99X8_syncAllRegisters() {
+
+		register uint8_t *r = (uint8_t *)TMS99X8;
+		DI();
+		VDP1 = *r++;
+		VDP1 = 0x80 | 0;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 1;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 2;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 3;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 4;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 5;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 6;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 7;
+		EI();
+	}
+
 #else
 
 	extern TMS99X8_Register TMS99X8;
 	extern uint8_t TMS99X8VRAM[0x4000];
 	inline static void TMS99X8_syncRegister(uint8_t reg) {(void)reg;}
+	INLINE void TMS99X8_syncAllRegisters() {
+		for (int i=0; i<8; i++)
+			TMS99X8_syncRegister(i);
+	}
 #endif
+
 
 
 

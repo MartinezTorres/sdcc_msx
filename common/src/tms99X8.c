@@ -8,6 +8,11 @@ void TMS99X8_clear() {
 	TMS99X8_setFlags(TMS99X8_M2 | TMS99X8_GINT | TMS99X8_MEM416K);
 	TMS99X8_memset(0,0,16*1024);
 	TMS99X8_setFlags(TMS99X8_M2 | TMS99X8_ENABLE | TMS99X8_GINT | TMS99X8_MEM416K);
+	
+	TMS99X8_memset(MODE2_ADDRESS_PN0, 0, sizeof(T_PN));
+	TMS99X8_memset(MODE2_ADDRESS_PN1, 0, sizeof(T_PN));
+	TMS99X8_memset(MODE2_ADDRESS_SA0, 208, sizeof(T_PN));
+	TMS99X8_memset(MODE2_ADDRESS_SA1, 208, sizeof(T_PN));	
 }
 
 void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
@@ -36,7 +41,7 @@ void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
 	TMS99X8.ct6  = (MODE2_ADDRESS_CT  >>  6) | ( (pgPageMask<<5) + 0x1F); // 0b01111111 
 	TMS99X8.pg11 = (((int16_t)MODE2_ADDRESS_PG)  >> 11) | pgPageMask; //0b00000011;
 	
-	printf("PageFlags: %d\n", TMS99X8.pg11); fflush(stdout);
+	//printf("PageFlags: %d\n", TMS99X8.pg11); fflush(stdout);
 	
 	TMS99X8.pn10 =  MODE2_ADDRESS_PN0 >> 10;
 	TMS99X8.sa7  =  MODE2_ADDRESS_SA0 >>  7;
@@ -45,21 +50,8 @@ void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
 	TMS99X8.backdrop  = BBlack;
 	TMS99X8.textcolor = BWhite;
 	
-	{
-		uint8_t i=0;
-		for (i=0; i<8; ++i)
-			TMS99X8_syncRegister(i);
-	}
-		
-	TMS99X8_memset(MODE2_ADDRESS_PN0, 0, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_PN1, 0, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_SA0, 208, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_SA1, 208, sizeof(T_PN));
-//	SA0[0].y = 208;
-//	SA1[1].y = 208;
-//	TMS99X8_writeSpriteAttributes(0,SA0);
-//	TMS99X8_writeSpriteAttributes(1,SA1);
-	
+	TMS99X8_syncAllRegisters();
+			
 	TMS99X8_clear();
 }
 
@@ -136,12 +128,12 @@ void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
 #endif
 
 
-void TMS99X8_writeSprite8 (uint8_t pos, U8x8   s) {
+void TMS99X8_writeSprite8 (uint8_t pos, const U8x8   s) {
 	
 	TMS99X8_memcpy(MODE2_ADDRESS_SG+(((uint16_t)pos)<<3), (const uint8_t *)s, 8);
 }
 
-void TMS99X8_writeSprite16(uint8_t pos, U16x16 s) {
+void TMS99X8_writeSprite16(uint8_t pos, const U16x16 s) {
 
 	uint8_t tmp[32];
 	register uint8_t i;
@@ -168,7 +160,7 @@ void TMS99X8_writeSprite16(uint8_t pos, U16x16 s) {
 	TMS99X8_memcpy(MODE2_ADDRESS_SG+(((uint16_t)pos)<<3), (const uint8_t *)s, 32);
 }
 
-void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, T_SA sa) {
+void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa) {
 	
 	TMS99X8_memcpy(buffer?MODE2_ADDRESS_SA1:MODE2_ADDRESS_SA0, (const uint8_t *)sa, sizeof(T_SA));
 }

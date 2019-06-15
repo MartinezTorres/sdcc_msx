@@ -78,6 +78,8 @@ typedef uint8_t  U8x8  [8];
 	#define DI(a)   do { __asm di   __endasm;  } while (false)
 	#define EI(a)   do { __asm ei   __endasm;  } while (false)
 	#define HALT(a) do { __asm halt __endasm;  } while (false)
+
+	INLINE void wait_frame() { HALT(); }
 	
 	extern uint8_t *__PHONY_POINTER__;
 	#define HASH_SIGN #

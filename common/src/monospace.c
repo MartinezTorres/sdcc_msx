@@ -40,7 +40,7 @@ void M2_MS_transformBorder(const U8x8 source, U8x8 target) {
 
 void M2_MS_setCharSimple(
 	T_M2_MS_Font font, // Font to be setup
-	EM2_MS_Pages pages, // Pages for which this font is active
+	EM2_RowPageFlags pages, // Pages for which this font is active
 	uint8_t idx, // ASCII index corresponding to this tile
 	const U8x8 shape, // Shape of the tile
 	const U8x8 color // Color of the tile
@@ -66,7 +66,7 @@ void M2_MS_setCharSimple(
 
 void M2_MS_setCharDouble(
 	T_M2_MS_Font font, // Font to be setup
-	EM2_MS_Pages pgpage, // Pages for which this font is active
+	EM2_RowPageFlags pgpage, // Pages for which this font is active
 	uint8_t idx, // ASCII index corresponding to this tile
 	const U8x8 shape0, // Shape of the tile on buffer0
 	const U8x8 color0, // Color of the tile on buffer0
@@ -143,73 +143,3 @@ void M2_MS_printAt (T_M2_MS_Font font, uint8_t x, uint8_t y, const char *msg) {
 	M2_MS_setPos(x,y);
 	M2_MS_puts(font,msg);
 }
-
-/*
-
-
-
-
-
-
-//typedef struct {
-//	uint8_t conv[256];
-//}
-//T_MS_Font;
-
-void M2_MS_loadFont(
-	EM2_PGpage pgpage, 
-	const T_MS_Font *msFont, 
-	const TFont font, 
-	const U8x8 color, 
-	uint8_t min, uint8_t max) {
-	
-	register uint8_t i = min;
-	for (i=min, i<max; i++) {
-		TileIdx freeTile = M2_findFreeTile(pgpage);
-		TMS99X8_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), font[i], 8);
-		TMS99X8_memcpy(ADDRESS_CT + (((uint16_t)freeTile)<<3), color, 8);
-		msFont.idx[i] = freeTile;
-	}
-}
-
-void M2_MS_freeFont(EM2_PGpage pgpage, const T_MS_Font *msFont, char min, char max) {
-	
-	register uint8_t i = min;
-	for (i=min, i<max; i++) 
-		M2_freeTile(pgpage, msFont.idx[i]);
-}
-
-void M2_MS_print(EM2_Buffer buffer, const T_MS_Font *msFont, const char *msg, uint8_t x, uint8_t y) {
-	
-	uint8_t tiles[32];
-	register uint8_t l = 0;
-	{
-		register const char *src = msg;
-		register uint8_t *dst = &tiles[0];
-		while (TRUE) {
-			register uint8_t v = *src++;
-			if (v==0) break;
-			l++;
-			*dst++ = msFont.idx[v];
-		}
-	}
-	TMS99X8_memcpy(baseAddress + x+(y<<5),tiles,l);
-}
-
-
-
-
-
-// Precondition, freeTiles must have at least 1 spot!
-uint8_t addASCIITile(uint8_t freeTiles[256], uint8_t ascii, const U8x8 shape, const U8x8 color) {
-	
-	uint8_t freeTile = 0;
-	while (freeTiles[freeTile]==0) freeTile++;
-	
-	TMS99X8_memcpy(ADDRESS_PG + (((uint16_t)freeTile)<<3), shape, 8);
-	TMS99X8_memcpy(ADDRESS_CT + (((uint16_t)freeTile)<<3), color, 8);
-
-	freeTiles[freeTile] = 0;
-	ascii2tiles[ascii] = freeTile;
-	return freeTile;
-}*/

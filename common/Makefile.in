@@ -21,7 +21,7 @@ INCLUDES = -Itmp/inc -Iinc -Icommon/inc
 
 #VERBOSE = -V
 MAX_ALLOCS = 1000
-CCFLAGS_MSX   = --disable-warning 126 --std-c99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_MSX   = --disable-warning 126 –std-sdcc99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
 CCFLAGS_LINUX =  -g -O1 -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Wno-inline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
 HEADERS       = $(shell find inc -name "*.h") $(shell find src -name "*.h") $(wildcard common/inc/*.h) $(wildcard tmp/inc/*.h) 
