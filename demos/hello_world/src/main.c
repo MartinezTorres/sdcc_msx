@@ -5,7 +5,7 @@
 #include <rand.h>
 
 
-#include <common/res/fonts/itfont-ek-zelda.h>
+#include <sdcc_msx/res/fonts/itfont-ek-zelda.h>
 T_M2_MS_Font mainFont; // Big structures, like this one, its better to store them in global storage
 
 int main(void) {
@@ -84,34 +84,34 @@ int main(void) {
 	    SA0[i].y = SA1[i].y = i*6;
 	    SA0[i].x = SA1[i].x = rand16();
 	    
-	    SA0[i].pattern = (255-2*i)&0x1F;
+	    SA0[i].pattern = (255-3*i)&0x1F;
 	    SA0[i].color = BCyan;
 
-	    SA1[i].pattern = (255-2*i)&0x1F;
+	    SA1[i].pattern = (255-3*i)&0x1F;
 	    SA1[i].color = BDarkRed;
 	}
 
 	for (i=0; i<20; i++)
-	    TMS99X8_writeSprite8(i,&sprites[0]);
+	    TMS99X8_writeSprite8(i,sprites[0]);
 
 	for (i=20; i<22; i++)
-	    TMS99X8_writeSprite8(i,&sprites[1]);
+	    TMS99X8_writeSprite8(i,sprites[1]);
 
 	for (i=22; i<25; i++)
-	    TMS99X8_writeSprite8(i,&sprites[2]);
+	    TMS99X8_writeSprite8(i,sprites[2]);
 
 	for (i=25; i<32; i++)
-	    TMS99X8_writeSprite8(i,&sprites[3]);
+	    TMS99X8_writeSprite8(i,sprites[3]);
 
 	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_0,SA0); // We also use alternating buffers for the sprites.
 	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_1,SA1);
     }
 	
-	
     while (true) { // Main loop, we alternate between buffers at each iteration.
 
 	wait_frame();
-	TMS99X8_activateBuffer(MODE2_BUFFER_0); // We select buffer 0, we modify sprites on buffer 1
+	TMS99X8_activateBuffer(MODE2_BUFFER_0); 
+	// We select buffer 0, we modify sprites on buffer 1
 	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_1,SA1);
 	{
 	    uint8_t i=0;
@@ -119,17 +119,21 @@ int main(void) {
 		uint8_t y = SA1[i].y, p = SA1[i].pattern;
 		SA1[i].y = (y==24*8?247:y+1);
 		SA1[i].pattern = (p==32?0:p+1);
+		if (p==1) SA0[i].x = SA1[i].x = rand16();
 	    }
 	}
 	
 	wait_frame();
+
+	// We select buffer 1, so we modify sprites on buffer 0
 	TMS99X8_activateBuffer(MODE2_BUFFER_1);
 	{
 	    uint8_t i=0;
 	    for (i=0; i<32; i++) {
-		uint8_t y = SA0[i].y, p = SA0[i].pattern;
-		SA0[i].y = (y==24*8?247:y+1);
-		SA0[i].pattern = (p==32?0:p+1);
+		SA0[i].y = SA1[i].y;
+		SA0[i].x = SA1[i].x;
+		SA0[i].pattern = SA1[i].pattern;
+		
 	    }
 	}
 	TMS99X8_writeSpriteAttributes(MODE2_BUFFER_0,SA0);

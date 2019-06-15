@@ -5,5 +5,5 @@ CODE_SIZE := 0x7FDF
 ADDR_DATA := 0xC000
 DATA_SIZE := 0x3000
 
-include ../../common/Makefile.in
+include sdcc_msx/Makefile.in
 

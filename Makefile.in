@@ -1,10 +1,3 @@
-#MEGAROM STRUCTURE:
-#0x4000-0x6000 -> Always block 0
-#0x6000-0x8000 -> Always block 1
-#0x8000-0xA000 -> Code segment
-#0xA000-0xC000 -> Const Data segment
-
-
 ADDR_CODE = 0x4020
 CODE_SIZE = 0x7FDF
 ADDR_DATA = 0xC000
@@ -17,16 +10,19 @@ ASM = sdasz80
 OPENMSX = openmsx -machine C-BIOS_MSX1  -carta 
 HEXBIN = makebin -s 4194304
 
-INCLUDES = -Itmp/inc -Iinc -Icommon/inc
+INCLUDES = -Itmp/inc -Iinc -Isdcc_msx/inc
 
 #VERBOSE = -V
 MAX_ALLOCS = 1000
-CCFLAGS_MSX   = --disable-warning 126 –std-sdcc99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_MSX   = --disable-warning 126 --std-sdcc99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
 CCFLAGS_LINUX =  -g -O1 -Wall -Wextra -pedantic -Winvalid-pch -Wformat=2 -Winit-self -Wno-inline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
-HEADERS       = $(shell find inc -name "*.h") $(shell find src -name "*.h") $(wildcard common/inc/*.h) $(wildcard tmp/inc/*.h) 
-SOURCES_C     = $(shell find src -name "*.c") $(wildcard common/src/*.c) $(wildcard tmp/src/*.c)
-SOURCES_ASM   = $(shell find src -name "*.s") $(wildcard common/src/*.s) $(wildcard tmp/src/*.s)
+#recursive wildcard
+rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
+
+HEADERS       = $(call rwildcard, src/ inc/ sdcc_msx/inc/ tmp/inc/, *.h) 
+SOURCES_C     = $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.c)
+SOURCES_ASM   = $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.s)
 
 .PHONY: all clean
 
@@ -40,44 +36,42 @@ all: out/msx/$(NAME).rom out/linux/$(NAME)
 # to lowercase: find res -depth -exec rename 's/(.*)\/([^\/]*)/$1\/\L$2/' {} \;
 
 # GENERATE FONTS
-FONTS_SRC := $(wildcard common/res/fonts/*.png) $(wildcard res/fonts/*.png)
+FONTS_SRC := $(call rwildcard, res/fonts/ sdcc_msx/res/fonts/, *.png)
 FONTS_GEN := $(patsubst %.png, tmp/%.c, $(FONTS_SRC))
-HEADERS      += $(patsubst %.png, tmp/inc/%.h, $(FONTS_SRC))
+HEADERS   += $(patsubst %.png, tmp/inc/%.h, $(FONTS_SRC))
 SOURCES_C += $(FONTS_GEN)		
 .PHONY: fonts
 fonts: $(FONTS_GEN)
 	@true
 
-tmp/inc/%.h: %.png tmp/common/util/mkFont
+tmp/inc/%.h: %.png tmp/sdcc_msx/util/mkFont
 	@echo $(MSG)
 	@mkdir -p tmp/$(<D)
-	@tmp/common/util/mkFont $< > tmp/$*.c
+	@tmp/sdcc_msx/util/mkFont $< > tmp/$*.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$*.c > $@
 
 # GENERATE BINARIES
-BINARIES_SRC += $(shell find res/ -type f -name '*.afb')
-BINARIES_SRC += $(shell find res/ -type f -name '*.afx')
-BINARIES_SRC += $(shell find res/ -type f -name '*.mid')
+BINARIES_SRC += $(call rwildcard, res/ sdcc_msx/res/, *.afb *.afx *.mid)
 
 BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
 HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
 SOURCES_C    += $(BINARIES_GEN)
 
 tmp/%.c: tmp/inc/%.h
-	@echo $(MSG)
+	@echo -n 
 
-tmp/inc/%.mid.h: %.mid tmp/common/util/mkMidi
+tmp/inc/%.mid.h: %.mid tmp/sdcc_msx/util/mkMidi
 	@echo $(MSG)
 	@mkdir -p tmp/$(<D)
-	@tmp/common/util/mkMidi -fps=60 $< tmp/$<.c
+	@tmp/sdcc_msx/util/mkMidi -fps=60 $< tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
 
-tmp/inc/%.h: % tmp/common/util/mkBinary tmp/common/util/mkMidi
+tmp/inc/%.h: % tmp/sdcc_msx/util/mkBinary tmp/sdcc_msx/util/mkMidi
 	@echo $(MSG)
 	@mkdir -p tmp/$(<D)
-	@tmp/common/util/mkBinary $< > tmp/$<.c
+	@tmp/sdcc_msx/util/mkBinary $< > tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
 
@@ -118,10 +112,10 @@ out/msx/%.rom.old: tmp/%.ihx
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
 	@grep ".*\. bytes " tmp/$(NAME).map | awk '{val=strtonum("0x"$$3); if (val>2) printf "%12s: %6d bytes (%6.2f KiB)\n", $$1, val, val/1024}'
 
-out/msx/%.rom: tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM)
+out/msx/%.rom: tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM)
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	tmp/common/util/k5link $(OBJ_C) $(OBJ_ASM) $@
+	tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM) $@
 
 msx: out/msx/$(NAME).rom
 	@echo $(MSG)

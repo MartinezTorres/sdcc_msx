@@ -185,7 +185,7 @@ struct REL {
 
 int main(int argc, char *argv[]) {
 	
-	Log::reportLevel(0);
+	Log::reportLevel(5);
 	
 	std::string romName = "out.rom";
 	for (int i=1; i<argc; i++) 
