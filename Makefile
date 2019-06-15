@@ -1,13 +1,13 @@
-GAMES := $(patsubst game/%,%,$(wildcard game/*) )
+DEMOS := $(patsubst demos/%,%,$(wildcard demos/*) )
 
-all: $(GAMES)
-	@echo $(GAMES)
+all: $(DEMOS)
+	@echo $(DEMOS)
 
-%: game/%/Makefile
-	@make --no-print-directory -C game/$@
+%: demos/%/Makefile
+	@make --no-print-directory -C demos/$@
 
 msx-%: %
-	@make --no-print-directory -C game/$@ msx
+	@make --no-print-directory -C demos/$@ msx
 
 run-%: %
-	@make --no-print-directory -C game/$@ run
+	@make --no-print-directory -C demos/$@ run
