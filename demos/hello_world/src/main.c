@@ -15,10 +15,10 @@ T_M2_MS_Font mainFont; // Big structures, like this one, its better to store the
 
 // Here we create a monospace font (i.e., each character being 8x8 pixels). By initializing it as "Double", we use two tiles per character.
 // By alternating between buffers we can obtain a larger combination of colors, as well as better color clash properties.
-void initFont() {
+static void initFont() {
 
-    const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
-    const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
+    static const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
+    static const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
     //const U8x8 color0 = {BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed};
     //const U8x8 color1 = {BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow};
     M2_MS_setFontDouble(
@@ -30,9 +30,9 @@ void initFont() {
 }
 
 
-void initSprites() {
+static void initSprites() {
 
-    const U8x8 sprites[] = { {
+    static const U8x8 sprites[] = { {
 	0b00000000,
 	0b00000000,
 	0b00000000,

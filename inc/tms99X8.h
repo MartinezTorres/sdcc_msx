@@ -95,7 +95,12 @@ EM2_Buffer;
 // High Level Interface
 
 void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages);
-void TMS99X8_activateBuffer(EM2_Buffer buffer);
+
+void TMS99X8_activateBuffer0();
+void TMS99X8_activateBuffer1();
+INLINE void TMS99X8_activateBuffer(EM2_Buffer buffer) { buffer?TMS99X8_activateBuffer1():TMS99X8_activateBuffer0(); }
+extern void (*TMS99X8_swapBuffersP)();
+INLINE void TMS99X8_swapBuffers() { (*TMS99X8_swapBuffersP)(); }
 
 ////////////////////////////////////////////////////////////////////////
 // Registers and Flags

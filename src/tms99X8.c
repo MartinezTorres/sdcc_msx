@@ -12,7 +12,9 @@ void TMS99X8_clear() {
 	TMS99X8_memset(MODE2_ADDRESS_PN0, 0, sizeof(T_PN));
 	TMS99X8_memset(MODE2_ADDRESS_PN1, 0, sizeof(T_PN));
 	TMS99X8_memset(MODE2_ADDRESS_SA0, 208, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_SA1, 208, sizeof(T_PN));	
+	TMS99X8_memset(MODE2_ADDRESS_SA1, 208, sizeof(T_PN));
+	
+	TMS99X8_swapBuffersP = TMS99X8_activateBuffer0;
 }
 
 void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
@@ -55,20 +57,25 @@ void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
 	TMS99X8_clear();
 }
 
-void TMS99X8_activateBuffer(EM2_Buffer buffer) {
-	switch (buffer) {
-	default:
-	case MODE2_BUFFER_0:
-		TMS99X8.pn10 = MODE2_ADDRESS_PN0 >> 10; 
-		TMS99X8.sa7  = MODE2_ADDRESS_SA0 >>  7; 
-		break;
-	case MODE2_BUFFER_1:
-		TMS99X8.pn10 = MODE2_ADDRESS_PN1 >> 10; 
-		TMS99X8.sa7  = MODE2_ADDRESS_SA1 >>  7; 
-		break;
-	}
+
+void (*TMS99X8_swapBuffersP)();
+
+void TMS99X8_activateBuffer0() {
+	
+	TMS99X8.pn10 = MODE2_ADDRESS_PN0 >> 10; 
+	TMS99X8.sa7  = MODE2_ADDRESS_SA0 >>  7; 
 	TMS99X8_syncRegister(2);
 	TMS99X8_syncRegister(5);
+	TMS99X8_swapBuffersP = TMS99X8_activateBuffer1;
+}
+
+void TMS99X8_activateBuffer1() {
+
+	TMS99X8.pn10 = MODE2_ADDRESS_PN1 >> 10; 
+	TMS99X8.sa7  = MODE2_ADDRESS_SA1 >>  7; 
+	TMS99X8_syncRegister(2);
+	TMS99X8_syncRegister(5);
+	TMS99X8_swapBuffersP = TMS99X8_activateBuffer0;
 }
 
 
