@@ -1,3 +1,6 @@
+	.module crt0msx
+
+
 ; crt0 for MSX ROM of 32KB, starting at 0x4000
 ; includes detection and set of ROM page 2 (0x8000 - 0xbfff)
 ; suggested options: --code-loc 0x4020 --data-loc 0xc000
@@ -23,11 +26,18 @@
 init:
 	ld      sp,(0xfc4a) ; Stack at the top of memory.
 	call    find_rom_page_2
+	call 	gsinit ; Initialize global variables
 	call    _main ; Initialise global variables
-	call    #0x0000; call CHKRAM
+	jp      init
 
 ; Ordering of segments for the linker.
 	.area	_CODE
+	.area   _GSINIT
+	.area   _GSFINAL
+
+	.area   _DATA
+	.area   _BSS
+	.area   _CODE
 
 ;------------------------------------------------
 ; find_rom_page_2

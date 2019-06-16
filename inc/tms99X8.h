@@ -172,9 +172,7 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	INLINE void TMS99X8_syncRegister(uint8_t reg) {
 
 		VDP1 = TMS99X8.reg[reg];
-		NOP();
 		VDP1 = 0x80 | reg;
-		NOP();
 	}
 
 	INLINE void TMS99X8_syncAllRegisters() {
@@ -209,6 +207,17 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 		for (int i=0; i<8; i++)
 			TMS99X8_syncRegister(i);
 	}
+#endif
+
+////////////////////////////////////////////////////////////////////////
+// Debug using Border Colors (only on MSX)
+
+#ifdef DEBUG
+INLINE void debugBorder(uint8_t v) {
+    TMS99X8_setRegister(7,v);
+}
+#else
+INLINE void debugBorder() {}
 #endif
 
 
