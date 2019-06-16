@@ -80,28 +80,10 @@ typedef uint8_t  U8x8  [8];
 	#define HALT(a) do { __asm halt __endasm;  } while (false)
 
 	INLINE void wait_frame() { HALT(); }
-	
-	extern uint8_t *__PHONY_POINTER__;
-	#define HASH_SIGN #
-	#define ZERO(DATA,N) do {\
-	__PHONY_POINTER__ = (uint8_t *)DATA; \
-	__asm \
-		push de \
-		push af \
-		ld de,HASH_SIGN ___PHONY_POINTER__ \
-		xor a, a \
-	__endasm; \
-		REPEAT( __asm__("ld (de),a"); __asm__("inc de");, N) \
-	__asm \
-		pop af \
-		pop de \
-	__endasm; } while (false)
-	
+		
 	inline int printf(const char *f, ...) { (f); return 0;}
 	#define fflush(a) do {} while(false)
 	
-	//INLINE void memset(uint8_t *d, uint8_t c, uint8_t n);
-	//INLINE void memcpy(uint8_t *d, uint8_t *s, uint8_t n);
 	#define memset(d,c,n) __builtin_memset(d,c,n);
 	#define memcpy(d,s,n) __builtin_memcpy(d,s,n);
 
@@ -117,8 +99,6 @@ typedef uint8_t  U8x8  [8];
 	#include <stdio.h>
 	#include <string.h>
 
-	#define ZERO(DATA,N) memset(DATA,0,N)
-
 #else
 	#error "Architecture Not Supported"
 #endif
@@ -129,31 +109,34 @@ typedef uint8_t  U8x8  [8];
 
 #ifdef MSX
 
-	#define USING_PAGE_A(module) uint8_t K5_PAGE_A_ ## module ()
-	#define USING_PAGE_B(module) uint8_t K5_PAGE_B_ ## module ()
-	#define USING_PAGE_C(module) uint8_t K5_PAGE_C_ ## module ()
-	#define USING_PAGE_D(module) uint8_t K5_PAGE_D_ ## module ()
-	#define SEGMENT_A(module) ((uint8_t)(K5_PAGE_A_ ## module ()))
-	#define SEGMENT_B(module) ((uint8_t)(K5_PAGE_B_ ## module ()))
-	#define SEGMENT_C(module) ((uint8_t)(K5_PAGE_C_ ## module ()))
-	#define SEGMENT_D(module) ((uint8_t)(K5_PAGE_D_ ## module ()))
+	// NAMING IS CONFUSING.
+	// THERE ARE 4 PAGES, A, B, C, and D. Each page can hold any segment (from 0 to 255) of the K5 mapped ROM
+
+	#define USING_PAGE_A(module) extern const uint8_t K5_SEGMENT_TO_PAGE_A_ ## module
+	#define USING_PAGE_B(module) extern const uint8_t K5_SEGMENT_TO_PAGE_B_ ## module
+	#define USING_PAGE_C(module) extern const uint8_t K5_SEGMENT_TO_PAGE_C_ ## module
+	#define USING_PAGE_D(module) extern const uint8_t K5_SEGMENT_TO_PAGE_D_ ## module
+	#define SEGMENT_TO_PAGE_A(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_A_ ## module)
+	#define SEGMENT_TO_PAGE_B(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_B_ ## module)
+	#define SEGMENT_TO_PAGE_C(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_C_ ## module)
+	#define SEGMENT_TO_PAGE_D(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_D_ ## module)
 
 	extern volatile uint8_t current_segment_a;
 	extern volatile uint8_t current_segment_b;
 	extern volatile uint8_t current_segment_c;
 	extern volatile uint8_t current_segment_d;
 	
-	inline uint8_t load_page_a(uint8_t newSegment) { register uint8_t oldSegment = current_segment_a;
-		*(uint8_t *)0x5000 = current_segment_a = newSegment; return oldSegment; }
+	inline uint8_t load_page_a(const uint8_t newSegment) { uint8_t oldSegment = current_segment_a;
+		*(uint8_t *)0x5000 = current_segment_a = (uint8_t)newSegment; return oldSegment; }
 
-	inline uint8_t load_page_b(uint8_t newSegment) { register uint8_t oldSegment = current_segment_b;
-		*(uint8_t *)0x7000 = current_segment_b = newSegment; return oldSegment; }
+	inline uint8_t load_page_b(const uint8_t newSegment) { uint8_t oldSegment = current_segment_b;
+		*(uint8_t *)0x7000 = current_segment_b = (uint8_t)newSegment; return oldSegment; }
 
-	inline uint8_t load_page_c(uint8_t newSegment) { register uint8_t oldSegment = current_segment_c;
-		*(uint8_t *)0x9000 = current_segment_c = newSegment; return oldSegment; }
+	inline uint8_t load_page_c(const uint8_t newSegment) { uint8_t oldSegment = current_segment_c;
+		*(uint8_t *)0x9000 = current_segment_c = (uint8_t)newSegment; return oldSegment; }
 
-	inline uint8_t load_page_d(uint8_t newSegment) { register uint8_t oldSegment = current_segment_d;
-		*(uint8_t *)0xB000 = current_segment_d = newSegment; return oldSegment; }
+	inline uint8_t load_page_d(const uint8_t newSegment) { uint8_t oldSegment = current_segment_d;
+		*(uint8_t *)0xB000 = current_segment_d = (uint8_t)newSegment; return oldSegment; }
 
 	inline void restore_page_a(uint8_t oldSegment) { *(uint8_t *)0x5000 = current_segment_a = oldSegment; }
 	inline void restore_page_b(uint8_t oldSegment) { *(uint8_t *)0x7000 = current_segment_b = oldSegment; }
@@ -167,14 +150,14 @@ typedef uint8_t  U8x8  [8];
 
 #elif LINUX
 
-	#define USING_PAGE_A(module) uint8_t K5_PAGE_A_ ## module ()
-	#define USING_PAGE_B(module) uint8_t K5_PAGE_B_ ## module ()
-	#define USING_PAGE_C(module) uint8_t K5_PAGE_C_ ## module ()
-	#define USING_PAGE_D(module) uint8_t K5_PAGE_D_ ## module ()
-	#define SEGMENT_A(module) 0
-	#define SEGMENT_B(module) 0
-	#define SEGMENT_C(module) 0
-	#define SEGMENT_D(module) 0
+	#define USING_PAGE_A(module) extern const uint8_t K5_PAGE_A_ ## module
+	#define USING_PAGE_B(module) extern const uint8_t K5_PAGE_B_ ## module
+	#define USING_PAGE_C(module) extern const uint8_t K5_PAGE_C_ ## module
+	#define USING_PAGE_D(module) extern const uint8_t K5_PAGE_D_ ## module
+	#define SEGMENT_TO_PAGE_A(module) 0
+	#define SEGMENT_TO_PAGE_B(module) 0
+	#define SEGMENT_TO_PAGE_C(module) 0
+	#define SEGMENT_TO_PAGE_D(module) 0
 	
 	inline static uint8_t load_page_a(uint8_t a) { (void)(a); return 0; }
 	inline static uint8_t load_page_b(uint8_t a) { (void)(a); return 0; }

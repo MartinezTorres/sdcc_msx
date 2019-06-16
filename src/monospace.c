@@ -14,7 +14,8 @@ void M2_MS_freeFontTiles(T_M2_MS_Font font) {
 		for (j=0; j<3; j++)
 			for (k=0; k<96; k++)
 				Tiles_free(j,font[i][j][k]);
-	ZERO(font,sizeof(T_M2_MS_Font));
+
+	memset(font,0,sizeof(T_M2_MS_Font));
 }
 
 void M2_MS_transformNull(const U8x8 source, U8x8 target) {

@@ -5,22 +5,17 @@
 #include <tms99X8.h>
 #include <monospace.h>
 #include <tile.h>
-#include <psg.h>
 
 
 
 #include <sdcc_msx/res/fonts/itfont-ek-zelda.h>
+T_M2_MS_Font mainFont;
+static void initFont() {
 
-T_M2_MS_Font mainFont; // Big structures, like this one, its better to store them in global storage
-
-// Here we create a monospace font (i.e., each character being 8x8 pixels). By initializing it as "Double", we use two tiles per character.
-// By alternating between buffers we can obtain a larger combination of colors, as well as better color clash properties.
-void initFont() {
-
-    //const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
-    //const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
-    const U8x8 color0 = {BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed};
-    const U8x8 color1 = {BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow};
+    //static const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
+    //static const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
+    static const U8x8 color0 = {BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed};
+    static const U8x8 color1 = {BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow};
     M2_MS_setFontDouble(
 	mainFont,
 	MODE2_ALL_ROWS,
@@ -30,7 +25,7 @@ void initFont() {
 }
 
 
-/*#include <res/ayfx/inicio_juego.afb.h>
+/*
 
 #include <res/midi/indy4/theme_and_opening_credits.mid.h>
 #include <res/midi/chopin/chpn_op10_e05.mid.h>
@@ -116,8 +111,56 @@ int main(void) {
 */
 
 
-int main(void) {
+#include <psg.h>
+USING_PAGE_B(psg);
 
+typedef struct {
+    
+    const char *name;
+    const uint8_t segment;
+    const void *ptr;
+} AudioMenuItem;
+
+////////////////////////////////////////////////////////////////////////
+// Load AFB sources
+
+#include <res/ayfx/inicio_juego.afb.h>
+
+USING_PAGE_C(inicio_juego_afb);
+
+static const AudioMenuItem ayFxItems[] = {
+    { "demo ayfx", SEGMENT_TO_PAGE_C(inicio_juego_afb), inicio_juego_afb },
+};
+
+////////////////////////////////////////////////////////////////////////
+// Load MIDI sources
+
+#include <res/midi/indy4/theme_and_opening_credits.mid.h>
+USING_PAGE_C(theme_and_opening_credits_mid);
+
+#include <res/midi/chopin/chpn_op10_e05.mid.h>
+USING_PAGE_C(chpn_op10_e05_mid);
+
+#include <res/midi/chopin/chpn_op10_e01.mid.h>
+USING_PAGE_C(chpn_op10_e01_mid);
+
+#include <res/midi/chopin/chpn_op10_e12.mid.h>
+USING_PAGE_C(chpn_op10_e12_mid);
+
+static const AudioMenuItem ayrItems[] = {
+    { "theme_and_opening_credits_mid", SEGMENT_TO_PAGE_C(theme_and_opening_credits_mid), &theme_and_opening_credits_mid },
+    { "chpn_op10_e05_mid", SEGMENT_TO_PAGE_C(chpn_op10_e05_mid), &chpn_op10_e05_mid },
+    { "chpn_op10_e01_mid", SEGMENT_TO_PAGE_C(chpn_op10_e01_mid), &chpn_op10_e01_mid },
+    { "chpn_op10_e12_mid", SEGMENT_TO_PAGE_C(chpn_op10_e12_mid), &chpn_op10_e12_mid },
+    { "chpn_op10_e12_mid", SEGMENT_TO_PAGE_C(chpn_op10_e12_mid), &chpn_op10_e12_mid },    
+};
+
+
+////////////////////////////////////////////////////////////////////////
+// MAIN
+
+int main(void) {
+    
     // Normal initialization routine
     msxhal_init(); // Bare minimum initialization of the msx support 
     Tiles_init(); // It initializes the global tile storage (i.e., to allow to load a font afterwards)
@@ -125,20 +168,33 @@ int main(void) {
     
     initFont();
    
-    // Set the hello world, also getting some information from the BIOS (i.e., the frequency of this MSX).
-    if (msxhal_get_interrupt_frequency()==MSX_FREQUENCY_60HZ) {
-	M2_MS_printAt(mainFont, 5, 5, "This is a 60Hz MSX!");
-	M2_MS_printAt(mainFont, 8, 7, "Kon'nichiwa sekai!");
-    } else {
-	M2_MS_printAt(mainFont, 0, 5, "This is a 50Hz MSX! Hello World!");
-    }
+    M2_MS_printAt(mainFont, 0, 0, "SDCC_MSX audio test");
+
+    M2_MS_printAt(mainFont, 2, 2, "PSG ayFx Player");
+
+    M2_MS_printAt(mainFont, 2, 8, "PSG MIDI Player");
+    
     
     // Main loop, we alternate between buffers at each interruption.
-    while (true) { 
+    {
+	uint8_t classSelection = 0;
+	uint8_t itemSelection = 0;
+	while (true) { 
 
-	wait_frame();
-	TMS99X8_swapBuffers(); 
-    };
+	    wait_frame();
+	    TMS99X8_swapBuffers(); 
+	    
+	    if (classSelection == 0) {
+		M2_MS_printAt(mainFont,1,2,">");
+		M2_MS_printAt(mainFont,1,8," ");
+	    } else {
+		M2_MS_printAt(mainFont,2,2," ");
+		M2_MS_printAt(mainFont,1,8,">");		
+	    }
+	    
+	    
+	};
+    }
     
     return 0;
 }

@@ -302,7 +302,14 @@ int main(int argc, char *argv[]) {
 			if (not rel.enabled) continue;
 			for (auto &sym : rel.symbols) {
 				if (sym.type!=REL::SYMBOL::REF) continue;
-				if (sym.name.find("_K5_PAGE_")==0) {
+				if (sym.name.find("_K5_SEGMENT_TO_PAGE_")==0) {
+					std::string moduleName = sym.name.substr(std::string("_K5_SEGMENT_TO_PAGE_X_").size());
+					for (auto &rel2 : rels) {
+						if (rel2.enabled) continue;
+						if (rel2.name != moduleName) continue;
+						rel2.enabled = true;
+						updated = true;
+					}
 					continue;
 				}
 				referencedSymbols[sym.name] = 0;
@@ -333,32 +340,6 @@ int main(int argc, char *argv[]) {
 		if (not updated) break;
 	}
 
-	// CHECK WHICH MODULES CAN BE PLACED IN NON-ZERO SEGMENTS, AND TO WHICH BANK THEY BELONG
-	/*for (auto &rel1 : rels) {
-		if (not rel1.enabled) continue;
-		for (auto &sym1 : rel1.symbols) {
-			if (sym1.type!=REL::SYMBOL::DEF) continue; 
-			// for each symbol defined in rel1			
-		
-			for (auto &rel2 : rels) {
-				for (auto &sym2 : rel2.symbols) {
-					if (sym2.name == sym1.name and sym2.type == REL::SYMBOL::REF) {
-						// if this symbol is used in another file it must be acommpanied by its corresponding loader.
-						
-						
-						bool found = false;
-						for (auto &sym3 : rel2.symbols)
-							found = found or sym3.name == "_K5_SEGMENT_"+rel1.name;
-						
-						if (not found) {
-							//std::cout << sym1.name << std::endl;
-							rel1.bankedAllowed = false;
-						}
-					}
-				}
-			}
-		}
-	}*/
 	
 	{
 		std::map<std::string,REL *> modulesByName;
@@ -374,10 +355,10 @@ int main(int argc, char *argv[]) {
 			if (not rel.enabled) continue;
 			for (auto &sym : rel.symbols) {
 				if (sym.type!=REL::SYMBOL::REF) continue; 
-				if (sym.name.find("_K5_PAGE_")!=0) continue;
+				if (sym.name.find("_K5_SEGMENT_TO_PAGE_")!=0) continue;
 				
-				int page = sym.name.substr(std::string("_K5_PAGE_").size(),1)[0]-'A';
-				std::string moduleName = sym.name.substr(std::string("_K5_PAGE_X_").size());
+				int page = sym.name.substr(std::string("_K5_SEGMENT_TO_PAGE_").size(),1)[0]-'A';
+				std::string moduleName = sym.name.substr(std::string("_K5_SEGMENT_TO_PAGE_X_").size());
 				
 				if (modulesByName.count(moduleName)==0)
 					throw std::runtime_error("Module " + moduleName + " unknown");
@@ -394,9 +375,9 @@ int main(int argc, char *argv[]) {
 			if (not rel.enabled) continue;
 			for (auto &sym : rel.symbols) {
 				if (sym.type!=REL::SYMBOL::REF) continue; 
-				if (sym.name.find("_K5_PAGE_")!=0) continue;
+				if (sym.name.find("_K5_SEGMENT_TO_PAGE_")!=0) continue;
 				
-				std::string moduleName = sym.name.substr(std::string("_K5_PAGE_X_").size());
+				std::string moduleName = sym.name.substr(std::string("_K5_SEGMENT_TO_PAGE_X_").size());
 				
 				if (modulesByName[moduleName]->page == rel.page)
 					throw std::runtime_error("Module " + rel.name + " is loading " + moduleName + " in its own page");
@@ -633,7 +614,7 @@ int main(int argc, char *argv[]) {
 				area_rom_addr.push_back(area.rom_addr); 
 			} else {
 				if (area.size)
-					Log(3) << "MModule: " << rel.name << " Area: " << area.name << " " << area.addr << " " << area.rom_addr;
+					Log(3) << "Module: " << rel.name << " Area: " << area.name << " " << area.addr << " " << area.rom_addr;
 				area_addr.push_back(0);
 				area_rom_addr.push_back(-0x4000);
 			}
@@ -688,35 +669,6 @@ int main(int argc, char *argv[]) {
 					size_t idx = xx1*0x100 + xx0;
 					size_t address;
 					
-					if ( n1 == R3_SYM and rel.symbols[idx].name.find("_K5_PAGE_")==0) {
-						
-						if (n2==n2Adjust) {
-							last_t_pos--;
-							T.insert(T.begin(),0);
-							n2Adjust--;
-						}
-
-						if (n2 <n2Adjust) 
-							throw std::runtime_error("n2 < n2Adjust??");
-						n2-=n2Adjust;
-						
-						T[n2-1] = 0x00; // NOP
-						T[n2+0] = 0x2E; // ld l,*
-						
-						for (auto &rel2 : rels) {
-							std::string requested_module = 
-								rel.symbols[idx].name.substr(
-									std::string("_K5_PAGE_X_").size()
-								);
-							if (rel2.name == requested_module) {
-								Log(0) << "Looking for module: " << requested_module << " " << rel2.segment;
-								T[n2+1] = rel2.segment;
-							}
-						}
-
-						continue;
-					}
-
 					if (n2 <n2Adjust) 
 						throw std::runtime_error("n2 < n2Adjust??");
 					n2-=n2Adjust;
@@ -724,10 +676,25 @@ int main(int argc, char *argv[]) {
 					
 					if ( n1 & R3_SYM ) {
 						
-						if (symbolsAddress.count(rel.symbols[idx].name)==0) 
-							throw std::runtime_error("Undefined symbol: " + rel.symbols[idx].name); 
+						if (symbolsAddress.count(rel.symbols[idx].name)!=0)  {
+
+							address = symbolsAddress[rel.symbols[idx].name];
+						} else if (rel.symbols[idx].name.find("_K5_SEGMENT_TO_PAGE_")==0) {
+							
+							for (auto &rel2 : rels) {
+								std::string requested_module = 
+									rel.symbols[idx].name.substr(
+										std::string("_K5_SEGMENT_TO_PAGE_").size()
+									);
+								if (rel2.name == requested_module) {
+									Log(0) << "Looking for module: " << requested_module << " " << rel2.segment;
+									address = rel2.segment;
+								}
+							}
 						
-						address = symbolsAddress[rel.symbols[idx].name];
+						} else {
+							throw std::runtime_error("Undefined symbol: " + rel.symbols[idx].name); 
+						}
 						
 						Log(3) << rel.symbols[idx].name << " " << std::hex << address;
 						

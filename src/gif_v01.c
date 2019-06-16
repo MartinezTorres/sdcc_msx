@@ -18,7 +18,7 @@ static void gif_v01_isr() {
     gif_v01_frames_left--;
     TMS99X8_activateBuffer(gif_v01_bufferId);
 
-    oldSegmentB = load_page_b(SEGMENT_B(psg));
+    oldSegmentB = load_page_b(SEGMENT_TO_PAGE_B(psg));
 
 
 /*    return;
