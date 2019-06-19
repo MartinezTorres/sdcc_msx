@@ -30,13 +30,15 @@ void msx_hal_isr(void) {
 isr_function msxhal_install_isr(isr_function new_isr) {
 	
 	register isr_function old = custom_isr;
-	DI();
 	custom_isr = new_isr;
-	EI();
 	return old;
 }
 
 void msxhal_init() {
+
+	__asm
+		di
+	__endasm;
 
 	//skip_keyboard_routine = false;
 	enable_keyboard_routine = true;
@@ -49,8 +51,8 @@ void msxhal_init() {
 	current_segment_c = 2;
 	current_segment_d = 3;
 
-	DI();
 	__asm
+
 		push ix
 		ld ix,#0
 		add ix,sp
@@ -87,7 +89,6 @@ void msxhal_init() {
 		ld (#0xFD9F+1),hl
 		pop ix
 	__endasm;
-	EI();
 }
 
 
@@ -99,8 +100,6 @@ inline static void joystick_read_placeholder(void) {
 ;		ld ix,#0
 ;		add ix,sp
 		
-		di
-
 		in a,(#0xAA)
 		and #0xF0       ; only change bits 0-3
 		or #8           ; row 8
@@ -109,8 +108,6 @@ inline static void joystick_read_placeholder(void) {
 		xor #0xFF
 		ld l,a
 		
-		ei
-
 ;		pop ix
 		ret
 	__endasm;
@@ -139,38 +136,5 @@ inline static void msxhal_getch_placeholder(void) {
 
 
 }
-/*
-void memset(uint8_t *d, uint8_t c, uint8_t n) { 
-
-	register uint8_t *dd = d;
-	register uint8_t nn = n;
-	register uint8_t cc = c;
-	while (nn--) 
-		*dd++ = cc; 
-}
-void memset8(uint8_t *d, uint8_t c, uint8_t n) { 
-
-	register uint8_t *dd = d;
-	register uint8_t nn = n;
-	register uint8_t cc = c;
-	while (nn--) 
-		REPEAT8(*dd++ = cc;) 
-}
-void memcpy(uint8_t *d, uint8_t *s, uint8_t n) { 
-
-	register uint8_t *ss = s;
-	register uint8_t *dd = d;
-	register uint8_t nn = n;
-	while (nn--) 
-		*dd++ = *ss++; 
-}
-void memcpy8(uint8_t *d, uint8_t *s, uint8_t n) { 
-
-	register uint8_t *dd = d;
-	register uint8_t *ss = s;
-	register uint8_t nn = n;
-	while (nn--) 
-		REPEAT8(*dd++ = *ss++;) 
-}*/
 
 #endif

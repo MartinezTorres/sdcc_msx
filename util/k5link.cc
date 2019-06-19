@@ -681,14 +681,15 @@ int main(int argc, char *argv[]) {
 							address = symbolsAddress[rel.symbols[idx].name];
 						} else if (rel.symbols[idx].name.find("_K5_SEGMENT_TO_PAGE_")==0) {
 							
+							std::string requested_module = 
+								rel.symbols[idx].name.substr(
+									std::string("_K5_SEGMENT_TO_PAGE_").size()+2
+								);
+							//Log(10) << "Looking for module: " << requested_module;
 							for (auto &rel2 : rels) {
-								std::string requested_module = 
-									rel.symbols[idx].name.substr(
-										std::string("_K5_SEGMENT_TO_PAGE_").size()
-									);
 								if (rel2.name == requested_module) {
-									Log(0) << "Looking for module: " << requested_module << " " << rel2.segment;
 									address = rel2.segment;
+									Log(0) << "FOUND! for module: " << requested_module << " " << rel2.name << " " << rel2.segment;
 								}
 							}
 						

@@ -339,7 +339,13 @@ isr_function msxhal_install_isr(isr_function new_isr) {
 	return old;
 }
 
+void yield() {
 
+	if (!SDL_is_initialized) {
+		printf("yield called before init()\n");
+		exit(-1);
+	}
+}
 
 void wait_frame() {
 
@@ -376,6 +382,7 @@ void wait_frame() {
 	uint32_t delay = SDL_GetTicks()%(1000/60);
 	SDL_Delay(1000/60-delay);
 }
+
 
 #endif
 

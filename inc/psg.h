@@ -56,6 +56,7 @@ void PSG_syncRegisters();
 
 void ayFX_init();
 void ayFX_afx(const uint8_t *afx, uint8_t segment, uint8_t priority, int8_t adjustedVolume);
+uint8_t ayFX_afb_getNSounds(const uint8_t *afb, uint8_t segment);
 void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority, int8_t adjustedVolume);
 void ayFX_spin();
 

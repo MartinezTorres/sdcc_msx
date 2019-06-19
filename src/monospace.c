@@ -123,7 +123,7 @@ void M2_MS_putchar (T_M2_MS_Font font, uint8_t idx) {
 		TMS99X8_memset(MODE2_ADDRESS_PN0 + address, font[0][page][idx] ,1);
 		TMS99X8_memset(MODE2_ADDRESS_PN1 + address, font[1][page][idx] ,1);
 		
-		printf("Print %c, (%d,%d) idx:%02X,%02X %04X\n",idx+32, posX, posY, font[0][page][idx], font[1][page][idx], MODE2_ADDRESS_PN0 + address);
+		//printf("Print %c, (%d,%d) idx:%02X,%02X %04X\n",idx+32, posX, posY, font[0][page][idx], font[1][page][idx], MODE2_ADDRESS_PN0 + address);
 		fflush(stdout);
 	}
 	

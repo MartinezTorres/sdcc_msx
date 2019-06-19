@@ -4,7 +4,9 @@ T_AY_3_8910_Registers AY_3_8910_Registers;
 
 void PSG_init() {
 	
-	memset(&AY_3_8910_Registers,0,14);
+	memset(AY_3_8910_Registers.reg,0,14);
+	AY_3_8910_Registers.enable.value = 0xFF;
+	
 }
 
 #ifdef MSX
@@ -14,10 +16,10 @@ void PSG_init() {
 	
 	void PSG_syncRegisters_asm();
 	
-	static void holder() {
-
+	static void PSG_syncRegisters_asm_placeholder() __naked {
+			
 		__asm
-_PSG_syncRegisters_asm::
+_PSG_syncRegisters_asm:
 			XOR A
 			LD C,#0xA0
 			LD HL,#_AY_3_8910_Registers
@@ -36,7 +38,6 @@ __LOUT:		OUT (C),A
 			OUT (C),A
 			RET	
 		__endasm;
-		
 	}
 
 
@@ -82,23 +83,27 @@ typedef struct {
 static T_AY_3_8910_Registers ayr_registers;
 static T_AYR_Status ayr_status;
 
-void ayr_init() { ayr_play(nullptr, 0); }
+void ayr_init() {
+	
+	ayr_play(nullptr, 0); 
+}
 
 void ayr_play(const AYR *ayr, uint8_t segment) {
-	
-	DI();
-	
-	memset(&AY_3_8910_Registers,0,14);
-	
+		
 	ayr_status.ayr = ayr;
 	ayr_status.segment = segment;
 	
-	ayr_status.channels[0].duration = 1;
-	ayr_status.channels[1].duration = 1;
-	ayr_status.channels[2].duration = 1;
-
-	if (ayr!=nullptr) {
+	if (ayr==nullptr) return;
+	{
+		
 		uint8_t oldSegmentPageC = load_page_c(segment);
+
+		memset(ayr_registers.reg,0,14);
+		ayr_registers.enable.value = 0xFF;
+
+		ayr_status.channels[0].duration = 1;
+		ayr_status.channels[1].duration = 1;
+		ayr_status.channels[2].duration = 1;
 		
 		ayr_status.channels[0].p = ayr->channels[0];
 		ayr_status.channels[1].p = ayr->channels[1];
@@ -106,107 +111,88 @@ void ayr_play(const AYR *ayr, uint8_t segment) {
 		
 		restore_page_c(oldSegmentPageC);    
 	}
-	EI();
 }
 
-INLINE bool ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
+static uint8_t ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
 
-	uint8_t meta;
-	if (--chan->duration) return true;
+	if (chan->duration == 0) return 0; 
+	// We return true iff the chanel has finished playing.
 	
-	meta = *chan->p++;
-
-	if ( !!(meta & 0x80) ) {
-		
-		uint8_t tone = *chan->p++;
-		if (tone) {
-			ayr_registers.tone[i] = midi2ay[tone];
-			switch (i) {
-			case 0:
-				ayr_registers.enable.tone_a  = 0;
-				ayr_registers.enable.noise_a = 1;
-				break;
-			case 1:
-				ayr_registers.enable.tone_b  = 0;
-				ayr_registers.enable.noise_b = 1;
-				break;
-			case 2:
-			default:
-				ayr_registers.enable.tone_c  = 0;
-				ayr_registers.enable.noise_c = 1;
-				break;
-			
-			}
-		} else {
-			switch (i) {
-			case 0:
-				ayr_registers.enable.tone_a  = 1;
-				ayr_registers.enable.noise_a = 0;
-				break;
-			case 1:
-				ayr_registers.enable.tone_b  = 1;
-				ayr_registers.enable.noise_b = 0;
-				break;
-			case 2:
-			default:
-				ayr_registers.enable.tone_c  = 1;
-				ayr_registers.enable.noise_c = 0;
-				break;
-			}				
-		}
-	}
-
-	ayr_registers.amplitude[i].volume = meta & 0x0F;
-
+	if (--chan->duration) return 1;
+	
 	{
-		uint8_t duration = (meta&0x70)>>4;
-		
-		if ( duration == 0 ) {
-			return false;
+		uint8_t meta = *chan->p++;
+
+		if ( !!(meta & 0x80) ) {
+			
+			uint8_t tone = *chan->p++;
+			if (tone) {
+				ayr_registers.tone[i] = midi2ay[tone];
+				switch (i) {
+				case 0:
+					ayr_registers.enable.tone_a  = 0;
+					ayr_registers.enable.noise_a = 1;
+					break;
+				case 1:
+					ayr_registers.enable.tone_b  = 0;
+					ayr_registers.enable.noise_b = 1;
+					break;
+				case 2:
+				default:
+					ayr_registers.enable.tone_c  = 0;
+					ayr_registers.enable.noise_c = 1;
+					break;
+				
+				}
+			} else {
+				switch (i) {
+				case 0:
+					ayr_registers.enable.tone_a  = 1;
+					ayr_registers.enable.noise_a = 0;
+					break;
+				case 1:
+					ayr_registers.enable.tone_b  = 1;
+					ayr_registers.enable.noise_b = 0;
+					break;
+				case 2:
+				default:
+					ayr_registers.enable.tone_c  = 1;
+					ayr_registers.enable.noise_c = 0;
+					break;
+				}
+			}
 		}
-		
-		if ( duration == 0x07 )
-			duration = *chan->p++;
-		chan->duration = duration;
+
+		ayr_registers.amplitude[i].volume = meta & 0x0F;
+
+		{
+			uint8_t duration = (meta&0x70)>>4;
+					
+			if ( duration == 0x07 )
+				duration = *chan->p++;
+
+			chan->duration = duration;
+		}
 	}	
-	return true;	
+	return 1;	
 }
 
 void ayr_spin() {
-	
-	
-	uint8_t oldSegmentPageC = load_page_c(ayr_status.segment);
+		
 	if (ayr_status.ayr==nullptr) return;
-	
-	if (
-		!ayr_spin_channel(&ayr_status.channels[0],0) ||
-		!ayr_spin_channel(&ayr_status.channels[1],1) ||
-		!ayr_spin_channel(&ayr_status.channels[2],2)) {
-		
-		ayr_play(ayr_status.ayr, ayr_status.segment);
-	}
-
 	{
-		uint8_t *src = ayr_registers.reg;
-		uint8_t *target = AY_3_8910_Registers.reg;
+		uint8_t oldSegmentPageC = load_page_c(ayr_status.segment);
 		
-		*target++ = *src++;
-		*target++ = *src++;
-		*target++ = *src++;
-		*target++ = *src++;
+		if (ayr_spin_channel(&ayr_status.channels[0],0) +
+			ayr_spin_channel(&ayr_status.channels[1],1) +
+			ayr_spin_channel(&ayr_status.channels[2],2) == 0) {
+			ayr_status.ayr = nullptr;
+		}
 
-		*target++ = *src++;
-		*target++ = *src++;
-		*target++ = *src++;
-		*target++ = *src++;
-
-		*target++ = *src++;
-		*target++ = *src++;
-		*target++ = *src++;
-		*target++ = *src++;
+		memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
+		
+		restore_page_c(oldSegmentPageC);    
 	}
-		
-	restore_page_c(oldSegmentPageC);    
 }
 
 
@@ -274,7 +260,10 @@ typedef struct {
 static T_ayFX_Status ayFX_status;
 
 void ayFX_init() {
-		
+	
+	PSG_init(); 
+	
+	ayFX_status.channel = 0;
 	ayFX_status.nEffects = 0;
 	{
 		uint8_t i;
@@ -289,11 +278,18 @@ INLINE T_ayFX_Effect *ayFX_effect(uint8_t idx) {
 	return &ayFX_status.effects[ayFX_status.sortedEffects[idx]];
 }
 
+static void ayFX_swap(uint8_t idx1, uint8_t idx2) {
+
+	uint8_t s = ayFX_status.sortedEffects[idx1];
+	ayFX_status.sortedEffects[idx1] = ayFX_status.sortedEffects[idx2];
+	ayFX_status.sortedEffects[idx2] = s;
+}
+
 static void ayFX_remove(uint8_t idx) {
 	
 	ayFX_status.nEffects--;
 	while (idx<ayFX_status.nEffects) {
-		swap(uint8_t,ayFX_status.sortedEffects[idx], ayFX_status.sortedEffects[idx+1]);
+		ayFX_swap(idx, idx+1);
 		idx++;
 	}
 }
@@ -317,7 +313,7 @@ void ayFX_afx(const uint8_t *afx, uint8_t segment, uint8_t priority, int8_t adju
 	ayFX_effect(idx)->segment = segment;
 	
 	while (idx>0 && ayFX_effect(idx-1)->priority <= ayFX_effect(idx)->priority) {
-		swap(uint8_t,ayFX_status.sortedEffects[idx-1], ayFX_status.sortedEffects[idx]);
+		ayFX_swap(idx-1, idx);
 		idx--;
 	}
 }
@@ -327,32 +323,57 @@ void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority
 	uint8_t oldSegmentPageC = load_page_c(segment);
 
 	const uint16_t *afxTable = (const uint16_t *)(afb+1);
-	ayFX_afx((const uint8_t *)&afxTable[idx] + 2 + afxTable[idx], segment, priority, adjustedVolume);
+	const uint8_t *afx = afb;
+
+	afx += 2; // To be finetuned
+	afx += idx;
+	afx += idx;
+	afx += afxTable[idx];	
+	ayFX_afx(afx, segment, priority, adjustedVolume);
 
 	restore_page_c(oldSegmentPageC);    
 }
 
-void ayFX_spin() {
+uint8_t ayFX_afb_getNSounds(const uint8_t *afb, uint8_t segment) {
 	
+	uint8_t oldSegmentPageC = load_page_c(segment);
+	uint8_t nSounds = *afb;
+	restore_page_c(oldSegmentPageC); 
+	return nSounds;
+}
+
+void ayFX_spin(void) {
+	
+	uint8_t oldSegmentPageC = load_page_c(0);
 	uint8_t idx = 0, nAppliedEffects = 0;
 	
 	uint8_t channel = ayFX_status.channel;
 	bool noiseUpdated = false;
+
+	uint8_t r_enable = AY_3_8910_Registers.enable.value;
 	
 	if (!channel) ayFX_status.channel = 3;
 	ayFX_status.channel--;
 
+	printf("Playing sound channel: %d \n", channel);
+
 	while (idx<ayFX_status.nEffects) {		
 		
 		T_ayFX_Effect *effect = ayFX_effect(idx++);
-		uint8_t oldSegmentPageC = load_page_c(effect->segment);
 		int8_t volume;
 		T_ayFX_Flags flags;
+
+		printf("Playing sound %d of %d\n", idx, ayFX_status.nEffects);
+		
+		fast_load_page_c(effect->segment);
+		
 		flags.value = *effect->afx++;
 		
 		if (flags.value==0xD0 && *effect->afx==0x20) {
-			ayFX_remove(idx);
+
+			printf("Removed sound %d of %d\n", idx, ayFX_status.nEffects);
 			idx--;
+			ayFX_remove(idx);
 			continue;
 		}
 		
@@ -364,10 +385,10 @@ void ayFX_spin() {
 		if (flags.changeN) {
 			effect->noise = *effect->afx++;
 		}
-			
+		
 		volume = flags.volume;
 		volume += effect->adjustedVolume;
-		
+
 		if (volume>15) volume=15;
 		if (volume< 0) volume=0;
 			
@@ -376,13 +397,15 @@ void ayFX_spin() {
 		if (flags.disableN && flags.disableT) continue;
 		if (noiseUpdated && flags.disableT) continue;
 
-		if (nAppliedEffects++>2) continue;
+		if (nAppliedEffects>2) continue;
+		nAppliedEffects++;
 
 		if (!channel) channel=3;
 		channel--;
 
 		AY_3_8910_Registers.amplitude[channel].volume = volume;		
 		AY_3_8910_Registers.amplitude[channel].m = 0;		
+		
 		
 		if (!noiseUpdated && !flags.disableN) {
 			AY_3_8910_Registers.noise_period = effect->noise;
@@ -393,10 +416,21 @@ void ayFX_spin() {
 			AY_3_8910_Registers.tone[channel] = effect->tone;
 		}
 		
-		AY_3_8910_Registers.enable.value |= (flags.value & 0x90) >> (4-channel);
-		restore_page_c(oldSegmentPageC);    
-	}
+		r_enable &= ~(((~flags.value) & 0x90) >> (4-channel));
 
+		printf("%d, %d, %d, %d, %d, %d, %d\n", 
+			AY_3_8910_Registers.amplitude[channel].volume, 
+			AY_3_8910_Registers.amplitude[channel].m, 
+			AY_3_8910_Registers.noise_period,
+			AY_3_8910_Registers.tone[channel],
+			flags.value,
+			r_enable,
+			channel); 
+	}
+	
+	AY_3_8910_Registers.enable.value = r_enable;
+
+	restore_page_c(oldSegmentPageC);    
 }
 
 

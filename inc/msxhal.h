@@ -49,7 +49,7 @@ typedef uint8_t  U8x8  [8];
 #define max(a,b) ((a)>(b)?(a):(b))
 #define min(a,b) ((a)<(b)?(a):(b))
 
-#define swap(a,b,c) do { a k_=b; b=c; c=k_; } while(false)
+//#define swap(a,b,c) do { a k_=b; b=c; c=k_; } while(false)
 
 #define REPEAT0(a)  { }
 #define REPEAT1(a)  { {a}; }
@@ -75,13 +75,28 @@ typedef uint8_t  U8x8  [8];
 #ifdef MSX
 
 	#define NOP(a)  do { __asm nop  __endasm;  } while (false)
-	#define DI(a)   do { __asm di   __endasm;  } while (false)
-	#define EI(a)   do { __asm ei   __endasm;  } while (false)
-	#define HALT(a) do { __asm halt __endasm;  } while (false)
+	//#define DI(a)   do { __asm di   __endasm;  } while (false)
+	//#define EI(a)   do { __asm ei   __endasm;  } while (false)
+	//#define HALT(a) do { __asm halt __endasm;  } while (false)
 
-	INLINE void wait_frame() { HALT(); }
+	INLINE void wait_frame(void) { 
+		__asm 
+			ei
+			nop
+			halt
+			di 
+		__endasm;
+	}
+	INLINE void yield(void) {
+		__asm 
+			ei
+			nop
+			di 
+		__endasm;
+	}
 		
-	inline int printf(const char *f, ...) { (f); return 0;}
+//	inline int printf(const char *f, ...) { (f); return 0;}
+	#define printf(...)
 	#define fflush(a) do {} while(false)
 	
 	#define memset(d,c,n) __builtin_memset(d,c,n);
@@ -89,12 +104,11 @@ typedef uint8_t  U8x8  [8];
 
 #elif LINUX
 
+	void yield();
 	void wait_frame();
 
 	#define NOP(a)  do { } while (false)
-	#define DI(a)   do { } while (false)
-	#define EI(a)   do { } while (false)
-	#define HALT(a) do { wait_frame(); } while (false)
+	//#define HALT(a) do { wait_frame(); } while (false)
 
 	#include <stdio.h>
 	#include <string.h>

@@ -4,11 +4,11 @@ char *uint16ToString(char *msg, uint16_t v, uint8_t zeroPad) {
 	
 	register char *p = msg;
 	char c;
-	c = 0; while (v>10000) { c++; v-=10000; } if (c || (zeroPad>4)) { *p++ = '0'+c; zeroPad=4; }
-	c = 0; while (v>1000 ) { c++; v-=1000;  } if (c || (zeroPad>3)) { *p++ = '0'+c; zeroPad=4; }
-	c = 0; while (v>100  ) { c++; v-=100;   } if (c || (zeroPad>2)) { *p++ = '0'+c; zeroPad=4; }
-	c = 0; while (v>10   ) { c++; v-=10;    } if (c || (zeroPad>1)) { *p++ = '0'+c; zeroPad=4; }
-	c = 0; while (v>1    ) { c++; v-=1;     } *p++ = '0'+c;
+	c = 0; while (v>=10000) { c++; v-=10000; } if (c || (zeroPad>4)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>=1000 ) { c++; v-=1000;  } if (c || (zeroPad>3)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>=100  ) { c++; v-=100;   } if (c || (zeroPad>2)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>=10   ) { c++; v-=10;    } if (c || (zeroPad>1)) { *p++ = '0'+c; zeroPad=4; }
+	c = 0; while (v>=1    ) { c++; v-=1;     } *p++ = '0'+c;
 	*p++=0;
 	return msg;
 }

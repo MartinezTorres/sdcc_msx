@@ -14,7 +14,7 @@ static void gif_v01_isr() {
     
     uint8_t oldSegmentB;
     
-	gif_v01_bufferId = !gif_v01_bufferId;
+    gif_v01_bufferId = !gif_v01_bufferId;
     gif_v01_frames_left--;
     TMS99X8_activateBuffer(gif_v01_bufferId);
 
@@ -42,10 +42,10 @@ static void gif_v01_isr() {
 }
 
 void gif_v01_initVideo() {
-	
-	
-	TMS99X8_activateMode2(MODE2_ALL_ROWS);
-	HALT();
+
+    TMS99X8_activateMode2(MODE2_ALL_ROWS);
+    wait_frame();
+
     gif_v01_frames_left = 5;
     gif_v01_bufferId = 0;
     old_isr = msxhal_install_isr(&gif_v01_isr);
@@ -60,8 +60,8 @@ void gif_v01_deinitVideo() {
     msxhal_install_isr(old_isr);
 }
 
-void gif_v01_pre_sendPN(void) { while (gif_v01_frames_left<50) HALT(); gif_v01_frames_left = 0; }
-void gif_v01_mid_sendPN(void) { while (gif_v01_frames_left<50) HALT(); gif_v01_frames_left = (msxhal_get_interrupt_frequency() == MSX_FREQUENCY_60HZ ? 3 : 2); }
+void gif_v01_pre_sendPN(void) { while (gif_v01_frames_left<50) wait_frame(); gif_v01_frames_left = 0; }
+void gif_v01_mid_sendPN(void) { while (gif_v01_frames_left<50) wait_frame(); gif_v01_frames_left = (msxhal_get_interrupt_frequency() == MSX_FREQUENCY_60HZ ? 3 : 2); }
 
 
 
@@ -101,7 +101,6 @@ inline static void _gif_v01_copy_pn_asm_placeholder(void) {
 		or a
 		jp nz, _gif_v01_copy_pn_asm_1
 
-		di
 		in a,(#0x99)
 		ld a,e
 		out (#0x99),a
@@ -113,15 +112,12 @@ inline static void _gif_v01_copy_pn_asm_placeholder(void) {
 	00003$:
 		outi
 		jp nz,00003$
-		ei
 		ret
 	__endasm;
 	}
 	
 	{__asm
 	_gif_v01_copy_pn_asm_1::
-
-		di
 		
 		ld a,e
 		out (#0x99),a
@@ -137,8 +133,6 @@ inline static void _gif_v01_copy_pn_asm_placeholder(void) {
 		out (#0x98),a
 		dec b
 		jp nz,00004$
-		
-		ei
 		ret
 	__endasm;
 	}	

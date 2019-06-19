@@ -98,11 +98,8 @@ void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
 
 	register uint16_t sz = size;
 	register const uint8_t *p = src;
-	
 	VDP1 = dst & 0xFF; 
-	NOP();
 	VDP1 = 0x40 | (dst>>8);
-	NOP();	
 	
 	while (sz--) VDP0 = *p++;
 }
@@ -113,9 +110,7 @@ void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
 	register const uint8_t val = value;
 	
 	VDP1 = dst & 0xFF; 
-	NOP();
 	VDP1 = 0x40 | (dst>>8);
-	NOP();	
 	
 	while (sz--) VDP0 = val;
 }

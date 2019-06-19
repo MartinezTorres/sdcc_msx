@@ -21,7 +21,6 @@ void gif_v01_mid_sendPN(void);
 
 #define gif_v01_copy_vpn_x8(address, data, sz) \
 do { \
-	DI(); \
 	__asm__("_MODE2_ADDRESS_CT = 0x2000"); \
 	__asm__("_MODE2_ADDRESS_PG = 0x0000"); \
 	__asm__("in a,(#0x99)"); \
@@ -34,7 +33,6 @@ do { \
 	__asm__("ld a,#( 0x40 + ((_" #address ")/256))"); \
 	__asm__("out (#0x99),a"); \
 	__asm__("call _gif_v01_copy_vpn_x8_asm"); \
-	EI(); \
 } while(false)
 
 
@@ -42,7 +40,6 @@ do { \
 INLINE void gif_v01_addPN(uint16_t target, const uint8_t *data, uint16_t sz) {
 
 	uint8_t pn[256];
-	DI();
 	{
 		uint16_t i = 0, j=(gif_v01_bufferId?0:128);
 		for (i=0; i<sz; i++)
@@ -50,7 +47,6 @@ INLINE void gif_v01_addPN(uint16_t target, const uint8_t *data, uint16_t sz) {
 
 		TMS99X8_memcpy( (gif_v01_bufferId?MODE2_ADDRESS_PN0:MODE2_ADDRESS_PN1)+target, pn, sz);
 	}
-	EI();
 }
 
 //INLINE void gif_v01_addPN_section0(const uint8_t *data, uint8_t start, uint8_t sz) { gif_v01_addPN((256*  0)+start,data,sz); }
@@ -119,14 +115,15 @@ do { \
 
 
 
-INLINE void gif_v01_copy_vpn_x8(uint16_t address, const uint8_t *data, uint8_t sz) { DI(); TMS99X8_memcpy(address,data,sz<<3); EI(); }
+INLINE void gif_v01_copy_vpn_x8(uint16_t address, const uint8_t *data, uint8_t sz) { 
+	TMS99X8_memcpy(address,data,sz<<3);
+}
 
 
 
 INLINE void gif_v01_addPN(uint16_t target, const uint8_t *data, uint16_t sz) {
 
 	uint8_t pn[256];
-	DI();
 	{
 		uint16_t i = 0;
 		uint8_t j=(gif_v01_bufferId?0:128);
@@ -135,7 +132,6 @@ INLINE void gif_v01_addPN(uint16_t target, const uint8_t *data, uint16_t sz) {
 
 		TMS99X8_memcpy( (gif_v01_bufferId?MODE2_ADDRESS_PN0:MODE2_ADDRESS_PN1)+target, pn, sz);
 	}
-	EI();
 }
 
 INLINE void gif_v01_addPN_section0(const uint8_t *data, uint8_t start, uint8_t sz) { gif_v01_addPN((256*  0)+start,data,sz); }

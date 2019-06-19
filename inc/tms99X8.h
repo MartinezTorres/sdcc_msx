@@ -183,7 +183,6 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	INLINE void TMS99X8_syncAllRegisters() {
 
 		register uint8_t *r = (uint8_t *)TMS99X8;
-		DI();
 		VDP1 = *r++;
 		VDP1 = 0x80 | 0;
 		VDP1 = *r++;
@@ -200,7 +199,6 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 		VDP1 = 0x80 | 6;
 		VDP1 = *r++;
 		VDP1 = 0x80 | 7;
-		EI();
 	}
 
 #else
