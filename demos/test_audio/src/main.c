@@ -8,10 +8,14 @@
 #include <msx_string.h>
 
 
+USING_PAGE_C(monospace);
+USING_PAGE_D(itfont_ek_zelda);
 
 #include <sdcc_msx/res/fonts/itfont-ek-zelda.h>
 T_M2_MS_Font mainFont;
 static void initFont() {
+
+    uint8_t oldPageD = load_page_d(SEGMENT_TO_PAGE_D(itfont_ek_zelda));
 
     //static const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
     //static const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
@@ -23,94 +27,9 @@ static void initFont() {
 	font_zelda,
 	M2_MS_transformBorder, // The color 1 will be applied to a "bold" version of the font.
 	color0, color1); 
-}
-
-
-/*
-
-#include <res/midi/indy4/theme_and_opening_credits.mid.h>
-#include <res/midi/chopin/chpn_op10_e05.mid.h>
-#include <res/midi/chopin/chpn_op10_e01.mid.h>
-#include <res/midi/chopin/chpn_op10_e12.mid.h>
-#include <res/midi/indy4/theme_and_opening_credits.mid.h>
-
-
-USING_PAGE_B(psg);
-USING_PAGE_C(chpn_op10_e05_mid);
-USING_PAGE_C(chpn_op10_e01_mid);
-USING_PAGE_C(chpn_op10_e12_mid);
-USING_PAGE_C(theme_and_opening_credits_mid);
-USING_PAGE_C(inicio_juego_afb);
-
-void audio_isr();
-
-void audio_isr() {
-    
-    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
-
-    TMS99X8_setRegister(7,0x77);
-    ayr_spin();
-    TMS99X8_setRegister(7,0x44);
-
-    TMS99X8_setRegister(7,0x88);
-    ayFX_spin();
-    TMS99X8_setRegister(7,0x44);
-    
-    PSG_syncRegisters();
-    TMS99X8_setRegister(7,0x55);
-
-    restore_page_b(oldSegmentPageB);    
-    TMS99X8_setRegister(7,0);    
-}
-
-INLINE int start() {
-
-    bool released = true;
-   
-   // TMS99X8_activateMode2(false);
-    
-    while (true) {
 	
-	uint8_t key = msxhal_joystick_read(0);
-	
-	if (key!=0 && released) {
-	    
-	    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
-	    DI();
-
-	    //if (key==J_SPACE) ayr_play(&chpn_op10_e05_mid,SEGMENT_C(chpn_op10_e05_mid));
-	    //if (key==J_DOWN)  ayr_play(&chpn_op10_e01_mid,SEGMENT_C(chpn_op10_e01_mid));
-	    //if (key==J_UP)    ayr_play(&chpn_op10_e12_mid,SEGMENT_C(chpn_op10_e12_mid));
-	    //if (key==J_LEFT)  ayr_play(&theme_and_opening_credits_mid,SEGMENT_C(theme_and_opening_credits_mid));
-
-	    ayFX_afb(inicio_juego_afb,SEGMENT_C(inicio_juego_afb),key>>4,15,0);
-	    EI();
-	    restore_page_b(oldSegmentPageB);    
-	}
-	
-	released = (key==0);
-	HALT();
-    };
-
+    restore_page_d(oldPageD);
 }
-
-int main(void) {
-
-    uint8_t oldSegmentPageB = load_page_b(SEGMENT_B(psg));
-
-    msxhal_init();
-    ayr_init();
-    ayFX_init();
-    msxhal_install_isr(&audio_isr);
-    
-    //PSG_init();
-
-    restore_page_b(oldSegmentPageB);    
-
-    start();
-}
-*/
-
 
 #include <psg.h>
 USING_PAGE_B(psg);
@@ -136,8 +55,13 @@ static const AudioMenuItem afbItems[] = {
 
 ////////////////////////////////////////////////////////////////////////
 // Load MIDI sources
+//
+// the list of midi sources can be automatically updated by running:
+//    make updateMidiHeader
+// this will add al files under /res/midi into the following header:
+#include <midiSources.h>
 
-#include <res/midi/indy4/theme_and_opening_credits.mid.h>
+/*#include <res/midi/indy4/theme_and_opening_credits.mid.h>
 USING_PAGE_C(theme_and_opening_credits_mid);
 
 #include <res/midi/chopin/chpn_op10_e05.mid.h>
@@ -154,7 +78,7 @@ static const AudioMenuItem ayrItems[] = {
     { "Chopin: OP10_e05", SEGMENT_TO_PAGE_C(chpn_op10_e05_mid), &chpn_op10_e05_mid },
     { "Chopin: OP10_e01", SEGMENT_TO_PAGE_C(chpn_op10_e01_mid), &chpn_op10_e01_mid },
     { "Chopin: OP10_e12", SEGMENT_TO_PAGE_C(chpn_op10_e12_mid), &chpn_op10_e12_mid },
-};
+};*/
 
 
 ////////////////////////////////////////////////////////////////////////
@@ -192,6 +116,7 @@ char msg[20];
 uint8_t afbNumItems;
 
 int main(void) {
+
     
     // Normal initialization routine
     msxhal_init(); // Bare minimum initialization of the msx support 
@@ -199,6 +124,7 @@ int main(void) {
     TMS99X8_activateMode2(MODE2_ALL_ROWS); // Activates mode 2 and clears the screen (in black)
     
     load_page_b(SEGMENT_TO_PAGE_B(psg));
+    load_page_c(SEGMENT_TO_PAGE_C(monospace));
     
     ayr_init();
     ayFX_init();

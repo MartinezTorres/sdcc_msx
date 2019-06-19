@@ -185,7 +185,7 @@ struct REL {
 
 int main(int argc, char *argv[]) {
 	
-	Log::reportLevel(5);
+	Log::reportLevel(10);
 	
 	std::string romName = "out.rom";
 	for (int i=1; i<argc; i++) 
@@ -430,8 +430,6 @@ int main(int argc, char *argv[]) {
 				}
 			}
 		}
-		Log(2) << "Allocated: " << (rom_ptr-0x4000) << " bytes of ROM";
-		if (rom_ptr>0x6000) throw std::runtime_error("Main segment ROM doesn't fit 8KB");
 
 		for (auto &rel : rels) {
 			if (not rel.enabled) continue;
@@ -444,8 +442,6 @@ int main(int argc, char *argv[]) {
 				ram_ptr += area.size;
 			}
 		}		
-		Log(2) << "Allocated: " << (ram_ptr-0xC000) << " bytes of RAM";		
-		if (ram_ptr>0xF000) throw std::runtime_error("RAM usage is larger than 12KB");
 	}
 
 	// ALLOCATE BANKABLE CODE AREAS
@@ -578,6 +574,12 @@ int main(int argc, char *argv[]) {
 
 		}
 	}
+
+	Log(2) << "Allocated: " << (rom_ptr-0x4000) << " bytes of ROM";
+	if (rom_ptr>0x6000) throw std::runtime_error("Main segment ROM doesn't fit 8KB");
+
+	Log(2) << "Allocated: " << (ram_ptr-0xC000) << " bytes of RAM";		
+	if (ram_ptr>0xF000) throw std::runtime_error("RAM usage is larger than 12KB");
 	
 	// DO LABEL SYMBOL ADDRESSES
 	std::map<std::string,size_t> symbolsAddress;

@@ -1,4 +1,4 @@
-NAME := test_audio
+NAME := saitama_demo
 
 ADDR_CODE := 0x4020
 CODE_SIZE := 0x7FDF
