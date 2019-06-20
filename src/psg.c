@@ -75,6 +75,7 @@ typedef struct {
 	
 	const AYR *ayr;
 	uint8_t segment;
+	uint8_t frameCount;
 	
 	T_AYR_Channel_Status channels[3];
 } T_AYR_Status;
@@ -92,6 +93,7 @@ void ayr_play(const AYR *ayr, uint8_t segment) {
 		
 	ayr_status.ayr = ayr;
 	ayr_status.segment = segment;
+	ayr_status.frameCount = 0;
 	
 	if (ayr==nullptr) return;
 	{
@@ -180,19 +182,26 @@ static uint8_t ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
 void ayr_spin() {
 		
 	if (ayr_status.ayr==nullptr) return;
+	if (msxhal_get_interrupt_frequency()==MSX_FREQUENCY_60HZ) {
+
+		if (++ayr_status.frameCount == 6) {
+			ayr_status.frameCount=0;
+			memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
+			return;
+		}
+	}
+	
 	{
 		uint8_t oldSegmentPageC = load_page_c(ayr_status.segment);
-		
 		if (ayr_spin_channel(&ayr_status.channels[0],0) +
 			ayr_spin_channel(&ayr_status.channels[1],1) +
 			ayr_spin_channel(&ayr_status.channels[2],2) == 0) {
 			ayr_status.ayr = nullptr;
 		}
-
-		memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
-		
 		restore_page_c(oldSegmentPageC);    
 	}
+
+	memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
 }
 
 
@@ -355,7 +364,6 @@ void ayFX_spin(void) {
 	if (!channel) ayFX_status.channel = 3;
 	ayFX_status.channel--;
 
-	printf("Playing sound channel: %d \n", channel);
 
 	while (idx<ayFX_status.nEffects) {		
 		
@@ -363,7 +371,7 @@ void ayFX_spin(void) {
 		int8_t volume;
 		T_ayFX_Flags flags;
 
-		printf("Playing sound %d of %d\n", idx, ayFX_status.nEffects);
+		//printf("Playing sound %d of %d\n", idx, ayFX_status.nEffects);
 		
 		fast_load_page_c(effect->segment);
 		

@@ -9,7 +9,7 @@
 
 
 
-#include <sdcc_msx/res/fonts/itfont-ek-zelda.h>
+#include <res/fonts/font1.png.h>
 
 T_M2_MS_Font mainFont; // Big structures, like this one, its better to store them in global storage
 
@@ -24,7 +24,7 @@ static void initFont() {
     M2_MS_setFontDouble(
 	mainFont,
 	MODE2_ALL_ROWS,
-	font_zelda,
+	font1,
 	M2_MS_transformBorder, // The color 1 will be applied to a "bold" version of the font.
 	color0, color1); 
 }

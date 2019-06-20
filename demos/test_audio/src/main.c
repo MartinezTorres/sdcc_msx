@@ -3,19 +3,22 @@
 
 #include <msxhal.h>
 #include <tms99X8.h>
+
 #include <monospace.h>
+USING_PAGE_C(monospace);
+
 #include <tile.h>
 #include <msx_string.h>
 
 
-USING_PAGE_C(monospace);
-USING_PAGE_D(itfont_ek_zelda);
 
-#include <sdcc_msx/res/fonts/itfont-ek-zelda.h>
+#include <res/fonts/font1.png.h>
+USING_PAGE_D(font1_png);
+
 T_M2_MS_Font mainFont;
 static void initFont() {
 
-    uint8_t oldPageD = load_page_d(SEGMENT_TO_PAGE_D(itfont_ek_zelda));
+    uint8_t oldPageD = load_page_d(SEGMENT_TO_PAGE_D(font1_png));
 
     //static const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
     //static const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
@@ -24,7 +27,7 @@ static void initFont() {
     M2_MS_setFontDouble(
 	mainFont,
 	MODE2_ALL_ROWS,
-	font_zelda,
+	font1,
 	M2_MS_transformBorder, // The color 1 will be applied to a "bold" version of the font.
 	color0, color1); 
 	
@@ -60,26 +63,6 @@ static const AudioMenuItem afbItems[] = {
 //    make updateMidiHeader
 // this will add al files under /res/midi into the following header:
 #include <midiSources.h>
-
-/*#include <res/midi/indy4/theme_and_opening_credits.mid.h>
-USING_PAGE_C(theme_and_opening_credits_mid);
-
-#include <res/midi/chopin/chpn_op10_e05.mid.h>
-USING_PAGE_C(chpn_op10_e05_mid);
-
-#include <res/midi/chopin/chpn_op10_e01.mid.h>
-USING_PAGE_C(chpn_op10_e01_mid);
-
-#include <res/midi/chopin/chpn_op10_e12.mid.h>
-USING_PAGE_C(chpn_op10_e12_mid);
-
-static const AudioMenuItem ayrItems[] = {
-    { "Indy4: theme_and_opening_credits", SEGMENT_TO_PAGE_C(theme_and_opening_credits_mid), &theme_and_opening_credits_mid },
-    { "Chopin: OP10_e05", SEGMENT_TO_PAGE_C(chpn_op10_e05_mid), &chpn_op10_e05_mid },
-    { "Chopin: OP10_e01", SEGMENT_TO_PAGE_C(chpn_op10_e01_mid), &chpn_op10_e01_mid },
-    { "Chopin: OP10_e12", SEGMENT_TO_PAGE_C(chpn_op10_e12_mid), &chpn_op10_e12_mid },
-};*/
-
 
 ////////////////////////////////////////////////////////////////////////
 // AUDIO ISR
@@ -199,13 +182,13 @@ int main(void) {
 			    afbIndex++;
 			    
 			} else if (afbSubSelection+1 == ayFX_afb_getNSounds(afbItems[afbSelection].item, afbItems[afbSelection].segment) 
-			    && afbSelection+1<(sizeof(afbItems)/sizeof(AudioMenuItem))) {
+			    && afbSelection+1<(uint8_t)(sizeof(afbItems)/sizeof(AudioMenuItem))) {
 			    afbSelection++;
 			    afbSubSelection = 0;
 			    afbIndex++;
 			}
 		    }
-		    if (classSelection==1 && ayrSelection+1<(sizeof(ayrItems)/sizeof(AudioMenuItem))) {
+		    if (classSelection==1 && ayrSelection+1<(uint8_t)(sizeof(ayrItems)/sizeof(AudioMenuItem))) {
 			ayrSelection++;
 		    } 
 		} else if (key==J_SPACE) {

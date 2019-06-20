@@ -8,17 +8,17 @@ volatile uint8_t gif_v01_bufferId;
 
 static isr_function old_isr;
 
-USING_PAGE_B(psg);
+//USING_PAGE_B(psg);
 
 static void gif_v01_isr() { 
     
-    uint8_t oldSegmentB;
+//    uint8_t oldSegmentB;
     
     gif_v01_bufferId = !gif_v01_bufferId;
     gif_v01_frames_left--;
     TMS99X8_activateBuffer(gif_v01_bufferId);
 
-    oldSegmentB = load_page_b(SEGMENT_TO_PAGE_B(psg));
+//    oldSegmentB = load_page_b(SEGMENT_TO_PAGE_B(psg));
 
 
 /*    return;
@@ -38,7 +38,7 @@ static void gif_v01_isr() {
     
     debugTimming(0x00);*/
 
-    restore_page_b(oldSegmentB);
+ //   restore_page_b(oldSegmentB);
 }
 
 void gif_v01_initVideo() {
@@ -69,6 +69,8 @@ void gif_v01_mid_sendPN(void) { while (gif_v01_frames_left<50) wait_frame(); gif
 
 #ifdef MSX
 
+void gif_v01_clean_registers(void) {}
+
 inline static void _gif_v01_copy_vpn_x8_asm_placeholder(void) {
 	
 	{__asm
@@ -85,6 +87,9 @@ inline static void _gif_v01_copy_vpn_x8_asm_placeholder(void) {
 		outi
 		dec e
 		jp nz,00001$
+		ei
+		nop
+		di
 		ret
 	__endasm;
 	}
@@ -112,6 +117,9 @@ inline static void _gif_v01_copy_pn_asm_placeholder(void) {
 	00003$:
 		outi
 		jp nz,00003$
+		ei
+		nop
+		di
 		ret
 	__endasm;
 	}
@@ -133,6 +141,9 @@ inline static void _gif_v01_copy_pn_asm_placeholder(void) {
 		out (#0x98),a
 		dec b
 		jp nz,00004$
+		ei
+		nop
+		di
 		ret
 	__endasm;
 	}	

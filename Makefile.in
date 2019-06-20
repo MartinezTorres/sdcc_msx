@@ -20,13 +20,15 @@ CCFLAGS_LINUX =  -g -O1 -Wall -Wextra -Winvalid-pch -Wformat=2 -Winit-self -Wno-
 #recursive wildcard
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
 
-HEADERS       = $(call rwildcard, src/ inc/ sdcc_msx/inc/ tmp/inc/, *.h) 
-SOURCES_C     = $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.c)
-SOURCES_ASM   = $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.s)
+HEADERS       += $(call rwildcard, src/ inc/ sdcc_msx/inc/ tmp/inc/, *.h) 
+SOURCES_C     += $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.c)
+SOURCES_ASM   += $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.s)
 
-.PHONY: all clean
+.PHONY: pre_target all clean msx run gdb
 
 all: out/msx/$(NAME).rom out/linux/$(NAME)
+
+pre_target::
 
 
 ##########################################################
@@ -35,24 +37,10 @@ all: out/msx/$(NAME).rom out/linux/$(NAME)
 # remove spaces: find res -name "* *" -type f | rename 's/ /_/g'
 # to lowercase: find res -depth -exec rename 's/(.*)\/([^\/]*)/$1\/\L$2/' {} \;
 
-# GENERATE FONTS
-FONTS_SRC := $(call rwildcard, res/fonts/ sdcc_msx/res/fonts/, *.png)
-FONTS_GEN := $(patsubst %.png, tmp/%.c, $(FONTS_SRC))
-HEADERS   += $(patsubst %.png, tmp/inc/%.h, $(FONTS_SRC))
-SOURCES_C += $(FONTS_GEN)		
-.PHONY: fonts
-fonts: $(FONTS_GEN)
-	@true
-
-tmp/inc/%.h: %.png tmp/sdcc_msx/util/mkFont
-	@echo $(MSG)
-	@mkdir -p tmp/$(<D)
-	@tmp/sdcc_msx/util/mkFont $< > tmp/$*.c
-	@mkdir -p tmp/inc/$(<D)
-	@cproto -qve < tmp/$*.c > $@
-
 # GENERATE BINARIES
-BINARIES_SRC += $(call rwildcard, res/ sdcc_msx/res/, *.afb *.afx *.mid)
+BINARIES_SRC += $(call rwildcard, res/fonts/, *.png)
+BINARIES_SRC += $(call rwildcard, res/ayfx/, *.afb *.afx)
+BINARIES_SRC += $(call rwildcard, res/midi/, *.mid)
 
 BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
 HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
@@ -61,14 +49,21 @@ SOURCES_C    += $(BINARIES_GEN)
 tmp/%.c: tmp/inc/%.h
 	@echo -n 
 
-tmp/inc/%.mid.h: %.mid tmp/sdcc_msx/util/mkMidi
+tmp/inc/res/fonts/%.h: res/fonts/% tmp/sdcc_msx/util/mkFont
 	@echo $(MSG)
 	@mkdir -p tmp/$(<D)
-	@tmp/sdcc_msx/util/mkMidi -fps=60 $< tmp/$<.c
+	@tmp/sdcc_msx/util/mkFont $< > tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
 
-tmp/inc/%.h: % tmp/sdcc_msx/util/mkBinary tmp/sdcc_msx/util/mkMidi
+tmp/inc/res/midi/%.h: res/midi/% tmp/sdcc_msx/util/mkMidi
+	@echo $(MSG)
+	@mkdir -p tmp/$(<D)
+	@tmp/sdcc_msx/util/mkMidi -fps=50 $< tmp/$<.c
+	@mkdir -p tmp/inc/$(<D)
+	@cproto -qve < tmp/$<.c > $@
+
+tmp/inc/res/ayfx/%.h: res/ayfx/% tmp/sdcc_msx/util/mkBinary
 	@echo $(MSG)
 	@mkdir -p tmp/$(<D)
 	@tmp/sdcc_msx/util/mkBinary $< > tmp/$<.c
@@ -112,7 +107,7 @@ out/msx/%.rom.old: tmp/%.ihx
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
 	@grep ".*\. bytes " tmp/$(NAME).map | awk '{val=strtonum("0x"$$3); if (val>2) printf "%12s: %6d bytes (%6.2f KiB)\n", $$1, val, val/1024}'
 
-out/msx/%.rom: tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM)
+out/msx/%.rom: pre_target tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM)
 	@echo $(MSG)
 	@mkdir -p $(@D)
 	@tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM) $@
@@ -125,7 +120,7 @@ msx: out/msx/$(NAME).rom
 ##########################################################
 ### LINUX SECTION
 
-out/linux/%: $(SOURCES_C) $(HEADERS)
+out/linux/%: pre_target $(SOURCES_C) $(HEADERS)
 	@echo $(MSG)
 	@mkdir -p $(@D)
 	@$(CC) -g -D LINUX $(INCLUDES) $(CCFLAGS_LINUX) $(SOURCES_C) -lSDL2 -o $@ 

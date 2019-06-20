@@ -19,7 +19,10 @@ void gif_v01_mid_sendPN(void);
 
 #ifdef MSX
 
+void gif_v01_clean_registers(void);
+
 #define gif_v01_copy_vpn_x8(address, data, sz) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("_MODE2_ADDRESS_CT = 0x2000"); \
 	__asm__("_MODE2_ADDRESS_PG = 0x0000"); \
@@ -57,6 +60,7 @@ INLINE void gif_v01_addPN(uint16_t target, const uint8_t *data, uint16_t sz) {
 //INLINE void gif_v01_addPN_section2_256(const uint8_t *data)                        { gif_v01_addPN((256*  2),data,256); }
 
 #define gif_v01_addPN_section0(data, start, sz) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("ld d,#(0x00)"); \
 	__asm__("ld e,#(" #start ")"); \
@@ -66,6 +70,7 @@ do { \
 } while(false)
 
 #define gif_v01_addPN_section0_256(data) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("ld d,#(0x00)"); \
 	__asm__("ld e,#(0x00)"); \
@@ -75,6 +80,7 @@ do { \
 } while(false)
 
 #define gif_v01_addPN_section1(data, start, sz) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("ld d,#(0x01)"); \
 	__asm__("ld e,#(" #start ")"); \
@@ -84,6 +90,7 @@ do { \
 } while(false)
 
 #define gif_v01_addPN_section1_256(data) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("ld d,#(0x01)"); \
 	__asm__("ld e,#(0x00)"); \
@@ -94,6 +101,7 @@ do { \
 
 
 #define gif_v01_addPN_section2(data, start, sz) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("ld d,#(0x02)"); \
 	__asm__("ld e,#(" #start ")"); \
@@ -103,6 +111,7 @@ do { \
 } while(false)
 
 #define gif_v01_addPN_section2_256(data) \
+gif_v01_clean_registers(); \
 do { \
 	__asm__("ld d,#(0x02)"); \
 	__asm__("ld e,#(0x00)"); \

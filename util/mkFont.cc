@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
 			for (int k=0; k<8; k++)
 				for (int l=0; l<8; l++)
 					small((i*16+j)*8+k,l) 
-						= 255*!!(img((4+i*8+k)*2,(4+j*8+l)*2)[0]>128);
+						= 255*!!(img((i*8+k),(j*8+l))[0]>128);
 
 	uint8_t font[128][8];
 	for (int i=0; i<128; i++)
@@ -34,9 +34,8 @@ int main(int argc, char *argv[]) {
 				font[i][j] = (font[i][j] << 1) + !!small(i*8+j,k);
 
 	std::string name = argv[1];
-	name = name.substr(name.rfind('-')+1);
+	name = name.substr(name.rfind('/')+1);
 	name = name.substr(0,name.size()-4);
-	name = "font_"+name;
 	
 
 	std::cout << "// Font file generated from:" << name.substr(name.rfind('-')+1) << std::endl;
