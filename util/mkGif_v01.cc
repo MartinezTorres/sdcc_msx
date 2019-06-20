@@ -869,8 +869,8 @@ int main(int argc, char *argv[]) {
 
 		std::cerr << storages[0].size() << "\t" << storages[1].size() << "\t" << storages[2].size() << "\t" << std::endl;
 		
-		cv::imshow("q_full", images[k]);
-		cv::waitKey(10);
+//		cv::imshow("q_full", images[k]);
+//		cv::waitKey(10);
 	}
 
 
