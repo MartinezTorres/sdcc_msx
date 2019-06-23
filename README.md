@@ -115,6 +115,10 @@ gifv01:
   opencv
 ```
 
+### License
+This Software is provided under a modified MIT license. All terms of the MIT license apply, but
+additionally I would like to have one copy of each product created using this framework.
+
 ## Based on the work by:
 - [Sandy Pleyte](https://github.com/sndpl/skeleton-sdcc-msx)
 - [NataliaPC](https://github.com/nataliapc/template-sdcc-msx)
