@@ -7,6 +7,11 @@
 // Text API where each character belongs to a Tile.
 //
 
+void M2_MS_initFontTiles(T_M2_MS_Font font) {
+
+	memset(font,0,sizeof(T_M2_MS_Font));
+}
+
 void M2_MS_freeFontTiles(T_M2_MS_Font font) {
 
 	uint8_t i,j,k;

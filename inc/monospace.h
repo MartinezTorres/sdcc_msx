@@ -15,6 +15,7 @@
 
 
 typedef uint8_t T_M2_MS_Font[2][3][96]; // It's pretty big!
+void M2_MS_initFontTiles(T_M2_MS_Font font);
 void M2_MS_freeFontTiles( T_M2_MS_Font font );
 
 void M2_MS_transformNull(const U8x8 source, U8x8 target);
@@ -46,7 +47,7 @@ INLINE void M2_MS_setFontSimple( // It setups charachers between 32 and 127 (inc
 ) {
 	
 	uint8_t i;
-	M2_MS_freeFontTiles(font);
+	M2_MS_initFontTiles(font);
 	for (i=0; i<96; i++) M2_MS_setCharSimple(font, pages, i+32, shapes[i], color);
 }
 
@@ -60,7 +61,7 @@ INLINE void M2_MS_setFontDouble( // It setups charachers between 32 and 127 (inc
 ) {
 	uint8_t i;
 	U8x8 bold;
-	M2_MS_freeFontTiles(font);
+	M2_MS_initFontTiles(font);
 	if (transform==nullptr) transform = &M2_MS_transformNull;
 	for (i=0; i<96; i++) {
 		(*transform)(shapes[i], bold);
