@@ -1,8 +1,6 @@
 #include <proportional.h>
 
-////////////////////////////////////////////////////////////////////////
-// PREPARE BORDER-FONT
-
+/*
 
 void M2_PS_AddChar(
 	M2_PS_Msg *propMsg, 
@@ -56,3 +54,4 @@ void M2_PS_InitMsg(
 	while (len--)
 		M2_PS_AddChar(propMsg,font,*msg++ - 32);
 }
+*/

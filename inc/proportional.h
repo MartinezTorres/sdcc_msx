@@ -2,8 +2,9 @@
 #include <msxhal.h>
 
 ////////////////////////////////////////////////////////////////////////
-// PREPARE BORDER-FONT
+// REWRITE OF THE API IN PROGRESS
 
+/*
 
 typedef struct {
 	uint8_t sizes[96];	
@@ -28,13 +29,14 @@ INLINE void M2_PS_prepareFont(
 		font->sizes[i] = (*transform)(monospacedFont[i], font->shapes[i]);
 }
 
-void M2_PS_AddChar(
-	M2_PS_Msg *propMsg, 
-	const M2_PS_Font *font, 
-	uint8_t c);
+bool M2_PS_AddChar(
+	T_M2_MS_Font font,
+	char c
+	);
 
 void M2_PS_InitMsg(
 	M2_PS_Msg *propMsg, 
 	const M2_PS_Font *font,
 	const char *msg, uint8_t len, 
 	uint8_t skip);
+*/
