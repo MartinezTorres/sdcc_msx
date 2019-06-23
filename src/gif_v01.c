@@ -8,37 +8,26 @@ volatile uint8_t gif_v01_bufferId;
 
 static isr_function old_isr;
 
-//USING_PAGE_B(psg);
+USING_PAGE_B(psg);
 
 static void gif_v01_isr() { 
     
-//    uint8_t oldSegmentB;
+    uint8_t oldSegmentB;
     
     gif_v01_bufferId = !gif_v01_bufferId;
     gif_v01_frames_left--;
     TMS99X8_activateBuffer(gif_v01_bufferId);
 
-//    oldSegmentB = load_page_b(SEGMENT_TO_PAGE_B(psg));
+//    TMS99X8_setRegister(7,BWhite);
 
-
-/*    return;
-    debugTimming(0x55);
-
-    debugTimming(0x88);
+    oldSegmentB = load_page_b(SEGMENT_TO_PAGE_B(psg));
+    PSG_init();    
     ayr_spin();
-    debugTimming(0x44);
-
-    debugTimming(0x88);
     ayFX_spin();
-
-    debugTimming(0x44);    
     PSG_syncRegisters();
+    restore_page_b(oldSegmentB);    
 
-    debugTimming(0x55);
-    
-    debugTimming(0x00);*/
-
- //   restore_page_b(oldSegmentB);
+//    TMS99X8_setRegister(7,BBlack);    
 }
 
 void gif_v01_initVideo() {
