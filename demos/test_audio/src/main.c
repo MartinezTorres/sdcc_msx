@@ -22,14 +22,14 @@ static void initFont() {
 
     //static const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
     //static const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
-    static const U8x8 color0 = {BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed, BBlack+FLightRed};
-    static const U8x8 color1 = {BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow};
-    M2_MS_setFontDouble(
+    static const U8x8 color0 = {BBlack+FWhite, BBlack+FWhite, BBlack+FWhite, BBlack+FWhite, BBlack+FWhite, BBlack+FWhite, BBlack+FWhite, BBlack+FWhite};
+    //static const U8x8 color1 = {BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow, BBlack+FLightYellow};
+    M2_MS_setFontSimple(
 	mainFont,
 	MODE2_ALL_ROWS,
 	font1,
-	M2_MS_transformBorder, // The color 1 will be applied to a "bold" version of the font.
-	color0, color1); 
+	//M2_MS_transformBorder, // The color 1 will be applied to a "bold" version of the font.
+	color0); 
 	
     restore_page_d(oldPageD);
 }
@@ -47,13 +47,19 @@ typedef struct {
 ////////////////////////////////////////////////////////////////////////
 // Load AFB sources
 
-#include <res/ayfx/inicio_juego.afb.h>
+#include <res/ayfx/test.afb.h>
+USING_PAGE_C(test_afb);
 
-USING_PAGE_C(inicio_juego_afb);
+#include <res/ayfx/streetsofrage_2.afb.h>
+USING_PAGE_C(streetsofrage_2_afb);
+
+#include <res/ayfx/zedragon.afb.h>
+USING_PAGE_C(zedragon_afb);
 
 static const AudioMenuItem afbItems[] = {
-    { "demo afb 1", SEGMENT_TO_PAGE_C(inicio_juego_afb), inicio_juego_afb },
-    { "demo afb 2", SEGMENT_TO_PAGE_C(inicio_juego_afb), inicio_juego_afb },
+    { "zedragon", SEGMENT_TO_PAGE_C(zedragon_afb), zedragon_afb },
+    { "streetsofrage2", SEGMENT_TO_PAGE_C(streetsofrage_2_afb), streetsofrage_2_afb },
+    { "test", SEGMENT_TO_PAGE_C(test_afb), test_afb },
 };
 
 ////////////////////////////////////////////////////////////////////////
