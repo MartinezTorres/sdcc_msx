@@ -150,7 +150,3 @@ void M2_MS_printAt (T_M2_MS_Font font, uint8_t x, uint8_t y, const char *msg) {
 	M2_MS_setPos(x,y);
 	M2_MS_puts(font,msg);
 }
-
-void M2_MS_bputchar (uint8_t buffer, T_M2_MS_Font font, uint8_t idx);
-void M2_MS_bputs    (uint8_t buffer, T_M2_MS_Font font, const char *msg);
-void M2_MS_bprintAt (uint8_t buffer, T_M2_MS_Font font, uint8_t x, uint8_t y, const char *msg);
