@@ -83,7 +83,7 @@ void TMS99X8_activateBuffer1() {
 // High Level Interface
 
 
-T_SA SA0, SA1;
+//T_SA SA0, SA1;
 
 void TMS99X8_setFlags(TMS99X8_TFlags flags) {
 	
@@ -119,6 +119,7 @@ void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
 
 TMS99X8_Register TMS99X8;
 uint8_t TMS99X8VRAM[0x4000];
+uint16_t TMS99X8VRAM_PTR;
 
 void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
 	memcpy(&TMS99X8VRAM[dst], src, size);

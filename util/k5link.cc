@@ -380,7 +380,7 @@ int main(int argc, char *argv[]) {
 				std::string moduleName = sym.name.substr(std::string("_K5_SEGMENT_TO_PAGE_X_").size());
 				
 				if (modulesByName[moduleName]->page == rel.page)
-					throw std::runtime_error("Module " + rel.name + " is loading " + moduleName + " in its own page");
+					std::cerr << "Warning: Module " << rel.name << " is loading " << moduleName << " in its own page" << std::endl;
 			}
 		}
 	}

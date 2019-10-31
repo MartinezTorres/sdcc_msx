@@ -8,14 +8,14 @@ static uint16_t rand16_seed2;
 
 uint16_t rand16() {
 	
-	uint16_t hl = rand16_seed1;
+	uint16_t hl = rand16_seed1 + 0xAAAA;
 	uint16_t bc = (hl<<8) + (hl>>8);
 	hl += hl;
 	hl += hl;
 	hl++;
 	hl += bc;
 	rand16_seed1 = hl;
-	hl = rand16_seed2;
+	hl = rand16_seed2 + 0x5555;
 	hl += hl;
 	hl = 45 ^ hl;
 	rand16_seed2 = hl;

@@ -151,7 +151,7 @@ TMS99X8_Register;
 ////////////////////////////////////////////////////////////////////////
 // Mid Level Interface
 
-extern T_SA SA0, SA1;
+//extern T_SA SA0, SA1;
 
 void TMS99X8_clear();
 
@@ -201,15 +201,27 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 		VDP1 = 0x80 | 7;
 	}
 
+	INLINE void TMS99X8_setAddressPtr(uint16_t dst) {
+		VDP1 = dst & 0xFF; 
+		VDP1 = 0x40 | (dst>>8);
+	}
+
+	INLINE void TMS99X8_write(uint8_t val) { VDP0 = val; }
+
 #else
 
 	extern TMS99X8_Register TMS99X8;
 	extern uint8_t TMS99X8VRAM[0x4000];
+	extern uint16_t TMS99X8VRAM_PTR;
+	
 	inline static void TMS99X8_syncRegister(uint8_t reg) {(void)reg;}
 	INLINE void TMS99X8_syncAllRegisters() {
 		for (int i=0; i<8; i++)
 			TMS99X8_syncRegister(i);
 	}
+
+	INLINE void TMS99X8_setAddressPtr(uint16_t dst) { TMS99X8VRAM_PTR = dst; }
+	INLINE void TMS99X8_write(uint8_t val) { TMS99X8VRAM_PTR = TMS99X8VRAM_PTR | 0x4000; TMS99X8VRAM[TMS99X8VRAM_PTR] = val; TMS99X8VRAM_PTR++; }
 #endif
 
 ////////////////////////////////////////////////////////////////////////

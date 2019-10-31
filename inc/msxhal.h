@@ -75,9 +75,9 @@ typedef uint8_t  U8x8  [8];
 #ifdef MSX
 
 	#define NOP(a)  do { __asm nop  __endasm;  } while (false)
-	//#define DI(a)   do { __asm di   __endasm;  } while (false)
-	//#define EI(a)   do { __asm ei   __endasm;  } while (false)
-	//#define HALT(a) do { __asm halt __endasm;  } while (false)
+	#define DI(a)   do { __asm di   __endasm;  } while (false) // Dangerous, please use wait_frame and yield instead.
+	#define EI(a)   do { __asm ei   __endasm;  } while (false) // Dangerous, please use wait_frame and yield instead.
+	#define HALT(a) do { __asm halt __endasm;  } while (false) // Dangerous, please use wait_frame and yield instead.
 
 	INLINE void wait_frame(void) { 
 		__asm 
@@ -108,7 +108,9 @@ typedef uint8_t  U8x8  [8];
 	void wait_frame();
 
 	#define NOP(a)  do { } while (false)
-	//#define HALT(a) do { wait_frame(); } while (false)
+	#define DI(a)
+	#define EI(a)
+	#define HALT(a) wait_frame()
 
 	#include <stdio.h>
 	#include <string.h>
@@ -123,7 +125,7 @@ typedef uint8_t  U8x8  [8];
 
 #ifdef MSX
 
-	// NAMING IS CONFUSING.
+	// NAMING IS CONFUSING, hence it deserves a comment.
 	// THERE ARE 4 PAGES, A, B, C, and D. Each page can hold any segment (from 0 to 255) of the K5 mapped ROM
 
 	#define USING_PAGE_A(module) extern const uint8_t K5_SEGMENT_TO_PAGE_A_ ## module
@@ -265,4 +267,5 @@ isr_function msxhal_install_isr(isr_function);
 // INIT FUNCTIONS
 void msxhal_init();
 
+void exit(int);
 

@@ -112,10 +112,15 @@ inline static void joystick_read_placeholder(void) {
 		ret
 	__endasm;
 
-	// WHat the heck is this?
+	// WHat the heck is this? 
+	// Update: now I know! To implement function pointers!
 	__asm
 ___sdcc_call_hl::
 	jp	(hl)
+___sdcc_call_ix::
+	jp	(ix)
+___sdcc_call_iy::
+	jp	(iy)
 	__endasm;
 }
 
