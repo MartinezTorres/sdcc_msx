@@ -10,11 +10,13 @@ ASM = sdasz80
 OPENMSX = openmsx -machine C-BIOS_MSX1  -carta 
 HEXBIN = makebin -s 4194304
 
+MSX_LINKER = tmp/sdcc_msx/util/module_linker
+
 INCLUDES = -Itmp/inc -Iinc -Isdcc_msx/inc -Isrc
 
 #VERBOSE = -V
 MAX_ALLOCS = 2000
-CCFLAGS_MSX   = --disable-warning 110 --disable-warning 126 --std-sdcc99 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
+CCFLAGS_MSX   = --std-sdcc99 --disable-warning 110 --disable-warning 126 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
 CCFLAGS_LINUX =  -g -O1 -Wall -Wextra -Winvalid-pch -Wformat=2 -Winit-self -Wno-inline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
 #recursive wildcard
@@ -24,7 +26,7 @@ HEADERS       += $(call rwildcard, src/ inc/ sdcc_msx/inc/ tmp/inc/, *.h)
 SOURCES_C     += $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.c)
 SOURCES_ASM   += $(call rwildcard,      src/ sdcc_msx/src/ tmp/src/, *.s)
 
-.PHONY: pre_target all clean msx run gdb
+.PHONY: pre_target all clean msx run gdb rom
 
 all: out/msx/$(NAME).rom out/linux/$(NAME)
 
@@ -107,10 +109,12 @@ out/msx/%.rom.old: tmp/%.ihx
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
 	@grep ".*\. bytes " tmp/$(NAME).map | awk '{val=strtonum("0x"$$3); if (val>2) printf "%12s: %6d bytes (%6.2f KiB)\n", $$1, val, val/1024}'
 
-out/msx/%.rom: pre_target tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM)
+out/msx/%.rom: pre_target $(MSX_LINKER) $(OBJ_C) $(OBJ_ASM)
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	@tmp/sdcc_msx/util/k5link $(OBJ_C) $(OBJ_ASM) $@
+	@$(MSX_LINKER) $(OBJ_C) $(OBJ_ASM) $@
+
+rom: out/msx/$(NAME).rom
 
 msx: out/msx/$(NAME).rom
 	@echo $(MSG)

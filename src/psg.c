@@ -97,8 +97,7 @@ void ayr_play(const AYR *ayr, uint8_t segment) {
 	
 	if (ayr==nullptr) return;
 	{
-		
-		uint8_t oldSegmentPageC = load_page_c(segment);
+		uint8_t oldSegmentPageD = mapper_load_segment(segment, PAGE_D);
 
 		memset(ayr_registers.reg,0,14);
 		ayr_registers.enable.value = 0xFF;
@@ -111,7 +110,7 @@ void ayr_play(const AYR *ayr, uint8_t segment) {
 		ayr_status.channels[1].p = ayr->channels[1];
 		ayr_status.channels[2].p = ayr->channels[2];
 		
-		restore_page_c(oldSegmentPageC);    
+		mapper_load_segment(oldSegmentPageD, PAGE_D);    
 	}
 }
 
@@ -192,13 +191,13 @@ void ayr_spin() {
 	}
 	
 	{
-		uint8_t oldSegmentPageC = load_page_c(ayr_status.segment);
+		uint8_t oldSegmentPageD = mapper_load_segment(ayr_status.segment, PAGE_D);
 		if (ayr_spin_channel(&ayr_status.channels[0],0) +
 			ayr_spin_channel(&ayr_status.channels[1],1) +
 			ayr_spin_channel(&ayr_status.channels[2],2) == 0) {
 			ayr_status.ayr = nullptr;
 		}
-		restore_page_c(oldSegmentPageC);    
+		mapper_load_segment(oldSegmentPageD, PAGE_D);    
 	}
 
 	memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
@@ -329,7 +328,7 @@ void ayFX_afx(const uint8_t *afx, uint8_t segment, uint8_t priority, int8_t adju
 
 void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority, int8_t adjustedVolume) {
 	
-	uint8_t oldSegmentPageC = load_page_c(segment);
+	uint8_t oldSegmentPageD = mapper_load_segment(segment, PAGE_D);
 
 	const uint16_t *afxTable = (const uint16_t *)(afb+1);
 	const uint8_t *afx = afb;
@@ -340,20 +339,20 @@ void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority
 	afx += afxTable[idx];	
 	ayFX_afx(afx, segment, priority, adjustedVolume);
 
-	restore_page_c(oldSegmentPageC);    
+	mapper_load_segment(oldSegmentPageD, PAGE_D);    
 }
 
 uint8_t ayFX_afb_getNSounds(const uint8_t *afb, uint8_t segment) {
 	
-	uint8_t oldSegmentPageC = load_page_c(segment);
+	uint8_t oldSegmentPageD = mapper_load_segment(segment, PAGE_D);
 	uint8_t nSounds = *afb;
-	restore_page_c(oldSegmentPageC); 
+	mapper_load_segment(oldSegmentPageD, PAGE_D);    
 	return nSounds;
 }
 
 void ayFX_spin(void) {
 	
-	uint8_t oldSegmentPageC = load_page_c(0);
+	uint8_t oldSegmentPageD = CURRENT_SEGMENT(PAGE_D);
 	uint8_t idx = 0, nAppliedEffects = 0;
 	
 	uint8_t channel = ayFX_status.channel;
@@ -373,7 +372,7 @@ void ayFX_spin(void) {
 
 		//printf("Playing sound %d of %d\n", idx, ayFX_status.nEffects);
 		
-		fast_load_page_c(effect->segment);
+        mapper_load_segment(effect->segment, PAGE_D);    
 		
 		flags.value = *effect->afx++;
 		
@@ -438,7 +437,7 @@ void ayFX_spin(void) {
 	
 	AY_3_8910_Registers.enable.value = r_enable;
 
-	restore_page_c(oldSegmentPageC);    
+	mapper_load_segment(oldSegmentPageD, PAGE_D);    
 }
 
 

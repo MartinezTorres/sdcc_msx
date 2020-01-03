@@ -318,7 +318,6 @@ static inline void closeSDL() {
     SDL_Quit();
 }
 
-
 void msxhal_init() {
 	
 	if (initSDL()<0) {

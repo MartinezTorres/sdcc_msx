@@ -1,5 +1,5 @@
 #include <msxhal.h>
-#include "splitList.h"
+#include "split_list.h"
 
 void SL_Init(SplitList *data) { 
 
@@ -13,6 +13,26 @@ void SL_Init(SplitList *data) {
             data->next[i] = i + 1;
             data->prev[i + 1] = i;
         }
+    }
+}
+
+void SL_MoveToSplit(SplitList *data, uint8_t i, uint8_t split) { 
+	
+    {
+        uint8_t pi = data->prev[i], ni = data->next[i];
+        data->next[pi] = ni;
+        data->prev[ni] = pi;
+    }
+	
+    {
+        uint8_t *pni = &data->next[split];
+        uint8_t ni = *pni;
+		
+        data->prev[i] = split;
+        data->next[i] = ni;
+        
+        data->prev[ni] = i;
+        *pni = i;
     }
 }
 

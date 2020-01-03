@@ -2,10 +2,7 @@
 
 #ifdef MSX
 
-volatile uint8_t current_segment_a;
-volatile uint8_t current_segment_b;
-volatile uint8_t current_segment_c;
-volatile uint8_t current_segment_d;
+uint8_t mapper_current_segments[4];
 
 uint8_t *__PHONY_POINTER__;
 
@@ -46,10 +43,10 @@ void msxhal_init() {
 	custom_isr = nullptr;
 	// Install our ISR 
 	
-	current_segment_a = 0;
-	current_segment_b = 1;
-	current_segment_c = 2;
-	current_segment_d = 3;
+	mapper_current_segments[0] = 0;
+	mapper_current_segments[1] = 1;
+	mapper_current_segments[2] = 2;
+	mapper_current_segments[3] = 3;
 
 	__asm
 

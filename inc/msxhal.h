@@ -1,7 +1,13 @@
 #pragma once
 
+// Removes warning for unused expressions
+#define UNUSED(expr) do { (void)(expr); } while (0)
+
+#define APPEND_INNER(a,b) a##b
+#define APPEND(a,b) APPEND_INNER(a,b)
+
 ////////////////////////////////////////////////////////////////////////
-// INLINE
+// INLINE and FASTCALL
 #ifdef MSX
 
 	#define INLINE inline
@@ -9,6 +15,7 @@
 #elif LINUX
 
 	#define INLINE static inline
+    #define __z88dk_fastcall
 
 #else
 	#error "Architecture Not Supported"
@@ -32,11 +39,13 @@ typedef struct {
 } TRect16;
 
 typedef struct {
-	uint8_t x,y;
+    union { uint8_t x,j; };
+    union { uint8_t y,i; };
 } uint8_tp;
 
 typedef struct {
-	int16_t x,y;
+    union { int16_t x,j; };
+    union { int16_t y,i; };
 } int16_tp;
 
 typedef uint16_t U16x16[16];
@@ -51,23 +60,34 @@ typedef uint8_t  U8x8  [8];
 
 //#define swap(a,b,c) do { a k_=b; b=c; c=k_; } while(false)
 
-#define REPEAT0(a)  { }
-#define REPEAT1(a)  { {a}; }
-#define REPEAT2(a)  { REPEAT1(a);  REPEAT1(a);  }
-#define REPEAT4(a)  { REPEAT2(a);  REPEAT2(a);  }
-#define REPEAT8(a)  { REPEAT4(a);  REPEAT4(a);  }
-#define REPEAT16(a) { REPEAT8(a);  REPEAT8(a);  }
-#define REPEAT32(a) { REPEAT16(a); REPEAT16(a); }
-#define REPEAT64(a) { REPEAT32(a); REPEAT32(a); }
-#define REPEAT(a,N) { \
+#define REPEAT0(a)  do { } while (false)
+#define REPEAT1(a)  do { a; } while (false)
+#define REPEAT2(a)  do { REPEAT1(a);  REPEAT1(a);  } while (false)
+#define REPEAT3(a)  do { REPEAT1(a);  REPEAT2(a);  } while (false)
+#define REPEAT4(a)  do { REPEAT2(a);  REPEAT2(a);  } while (false)
+#define REPEAT8(a)  do { REPEAT4(a);  REPEAT4(a);  } while (false)
+#define REPEAT16(a) do { REPEAT8(a);  REPEAT8(a);  } while (false)
+#define REPEAT32(a) do { REPEAT16(a); REPEAT16(a); } while (false)
+#define REPEAT64(a) do { REPEAT32(a); REPEAT32(a); } while (false)
+#define REPEAT(a,N) do { \
 	if (N&(1<<0)) REPEAT1(a);  \
 	if (N&(1<<1)) REPEAT2(a);  \
 	if (N&(1<<2)) REPEAT4(a);  \
-	if (N&(1<<3)) REPEAT8(a); \
+	if (N&(1<<3)) REPEAT8(a);  \
 	if (N&(1<<4)) REPEAT16(a); \
 	if (N&(1<<5)) REPEAT32(a); \
 	if (N&(1<<6)) REPEAT64(a); \
-}
+} while (false)
+
+#define UNROLL1(nn,t,a)  do { if (nn<t) { uint8_t n = nn; a; UNUSED(n); } } while (false)
+#define UNROLL2(nn,t,a)  do { if (nn<t) { UNROLL1(nn,t,a);  UNROLL1(nn+1,t,a);   } } while (false)
+#define UNROLL4(nn,t,a)  do { if (nn<t) { UNROLL2(nn,t,a);  UNROLL2(nn+2,t,a);   } } while (false)
+#define UNROLL8(nn,t,a)  do { if (nn<t) { UNROLL4(nn,t,a);  UNROLL4(nn+4,t,a);   } } while (false)
+#define UNROLL16(nn,t,a) do { if (nn<t) { UNROLL8(nn,t,a);  UNROLL8(nn+8,t,a);   } } while (false)
+#define UNROLL32(nn,t,a) do { if (nn<t) { UNROLL16(nn,t,a); UNROLL16(nn+16,t,a); } } while (false)
+#define UNROLL64(nn,t,a) do { if (nn<t) { UNROLL32(nn,t,a); UNROLL32(nn+32,t,a); } } while (false)
+
+#define UNROLL(t,a)      do { UNROLL64(0,t,a); UNROLL64(64,t,a); } while (false)
 
 ////////////////////////////////////////////////////////////////////////
 // COMMON ASM INTEGRATIONS
@@ -120,80 +140,130 @@ typedef uint8_t  U8x8  [8];
 #endif
 
 ////////////////////////////////////////////////////////////////////////
-// BLOCK FUNCTIONS
+// MAPPER FUNCTIONS
+// THERE ARE 4 PAGES, A, B, C, and D. Each page can hold any segment (from 0 to 255) of the mapped ROM
+// 
+// MAPPER can be selected between ASCII8_MAPPER and KONAMI5_MAPPER and NULL_MAPPER
+
+typedef enum { PAGE_A=0, PAGE_B=1, PAGE_C=2, PAGE_D=3 } Page;
 
 
-#ifdef MSX
-
-	// NAMING IS CONFUSING, hence it deserves a comment.
-	// THERE ARE 4 PAGES, A, B, C, and D. Each page can hold any segment (from 0 to 255) of the K5 mapped ROM
-
-	#define USING_PAGE_A(module) extern const uint8_t K5_SEGMENT_TO_PAGE_A_ ## module
-	#define USING_PAGE_B(module) extern const uint8_t K5_SEGMENT_TO_PAGE_B_ ## module
-	#define USING_PAGE_C(module) extern const uint8_t K5_SEGMENT_TO_PAGE_C_ ## module
-	#define USING_PAGE_D(module) extern const uint8_t K5_SEGMENT_TO_PAGE_D_ ## module
-	#define SEGMENT_TO_PAGE_A(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_A_ ## module)
-	#define SEGMENT_TO_PAGE_B(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_B_ ## module)
-	#define SEGMENT_TO_PAGE_C(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_C_ ## module)
-	#define SEGMENT_TO_PAGE_D(module) ((const uint8_t)&K5_SEGMENT_TO_PAGE_D_ ## module)
-
-	extern volatile uint8_t current_segment_a;
-	extern volatile uint8_t current_segment_b;
-	extern volatile uint8_t current_segment_c;
-	extern volatile uint8_t current_segment_d;
-	
-	inline uint8_t load_page_a(const uint8_t newSegment) { uint8_t oldSegment = current_segment_a;
-		*(uint8_t *)0x5000 = current_segment_a = (uint8_t)newSegment; return oldSegment; }
-
-	inline uint8_t load_page_b(const uint8_t newSegment) { uint8_t oldSegment = current_segment_b;
-		*(uint8_t *)0x7000 = current_segment_b = (uint8_t)newSegment; return oldSegment; }
-
-	inline uint8_t load_page_c(const uint8_t newSegment) { uint8_t oldSegment = current_segment_c;
-		*(uint8_t *)0x9000 = current_segment_c = (uint8_t)newSegment; return oldSegment; }
-
-	inline uint8_t load_page_d(const uint8_t newSegment) { uint8_t oldSegment = current_segment_d;
-		*(uint8_t *)0xB000 = current_segment_d = (uint8_t)newSegment; return oldSegment; }
-
-	inline void restore_page_a(uint8_t oldSegment) { *(uint8_t *)0x5000 = current_segment_a = oldSegment; }
-	inline void restore_page_b(uint8_t oldSegment) { *(uint8_t *)0x7000 = current_segment_b = oldSegment; }
-	inline void restore_page_c(uint8_t oldSegment) { *(uint8_t *)0x9000 = current_segment_c = oldSegment; }
-	inline void restore_page_d(uint8_t oldSegment) { *(uint8_t *)0xB000 = current_segment_d = oldSegment; }
-
-	inline void fast_load_page_a(uint8_t segment) { *(uint8_t *)0x5000 = current_segment_a = segment; }
-	inline void fast_load_page_b(uint8_t segment) { *(uint8_t *)0x7000 = current_segment_b =segment; }
-	inline void fast_load_page_c(uint8_t segment) { *(uint8_t *)0x9000 = current_segment_c =segment; }
-	inline void fast_load_page_d(uint8_t segment) { *(uint8_t *)0xB000 = current_segment_d =segment; }
-
-#elif LINUX
-
-	#define USING_PAGE_A(module) extern const uint8_t K5_PAGE_A_ ## module
-	#define USING_PAGE_B(module) extern const uint8_t K5_PAGE_B_ ## module
-	#define USING_PAGE_C(module) extern const uint8_t K5_PAGE_C_ ## module
-	#define USING_PAGE_D(module) extern const uint8_t K5_PAGE_D_ ## module
-	#define SEGMENT_TO_PAGE_A(module) 0
-	#define SEGMENT_TO_PAGE_B(module) 0
-	#define SEGMENT_TO_PAGE_C(module) 0
-	#define SEGMENT_TO_PAGE_D(module) 0
-	
-	inline static uint8_t load_page_a(uint8_t a) { (void)(a); return 0; }
-	inline static uint8_t load_page_b(uint8_t a) { (void)(a); return 0; }
-	inline static uint8_t load_page_c(uint8_t a) { (void)(a); return 0; }
-	inline static uint8_t load_page_d(uint8_t a) { (void)(a); return 0; }
-	inline static void restore_page_a(uint8_t a) { (void)(a); }
-	inline static void restore_page_b(uint8_t a) { (void)(a); }
-	inline static void restore_page_c(uint8_t a) { (void)(a); }
-	inline static void restore_page_d(uint8_t a) { (void)(a); }
-	inline static void fast_load_page_a(uint8_t a) { (void)(a); }
-	inline static void fast_load_page_b(uint8_t a) { (void)(a); }
-	inline static void fast_load_page_c(uint8_t a) { (void)(a); }
-	inline static void fast_load_page_d(uint8_t a) { (void)(a); }
-
-
-#else
-	#error "Architecture Not Supported"
+#ifdef MAPPER
+    #error "Mapper should be defined internally"
 #endif
 
+#ifdef KONAMI5
+    #define MAPPER MAPPER_8K
+    #define MAPPER_FAST MAPPER_8K_FAST
+    #define PAGE_A_ADDRESS 0x5000
+    #define PAGE_B_ADDRESS 0x7000
+    #define PAGE_C_ADDRESS 0x9000
+    #define PAGE_D_ADDRESS 0xB000
+#endif
 
+#ifdef ASCII8
+    #ifdef MAPPER
+        #error "Duplicated mapper definition"
+    #endif
+    #define MAPPER MAPPER_8K
+    #define MAPPER_FAST MAPPER_8K_FAST
+    #define PAGE_A_ADDRESS 0x6000
+    #define PAGE_B_ADDRESS 0x6800
+    #define PAGE_C_ADDRESS 0x7000
+    #define PAGE_D_ADDRESS 0x7800
+#endif
+
+#ifdef LINUX
+    #undef MAPPER
+#endif
+
+#ifndef MAPPER
+    #define MAPPER(segment, page) do {} while(false)
+    #define MAPPER_FAST(segment, page) do {} while(false)
+	#define MODULE_SEGMENT(module, page) 0
+    #define CURRENT_SEGMENT(page) 0
+#else
+	#define MODULE_SEGMENT_APPEND(module, page) ((const uint8_t)&MAPPER_MODULE_ ## module ## _ ## page)
+	#define MODULE_SEGMENT(module, page) MODULE_SEGMENT_APPEND( module, page)
+    #define CURRENT_SEGMENT(page) mapper_current_segments[page] 
+
+    extern uint8_t mapper_current_segments[4];
+
+    INLINE void MAPPER_8K(uint8_t segment, Page page) { 
+        if (page == PAGE_A) *(uint8_t *)PAGE_A_ADDRESS = mapper_current_segments[PAGE_A] = segment;
+        if (page == PAGE_B) *(uint8_t *)PAGE_B_ADDRESS = mapper_current_segments[PAGE_B] = segment;
+        if (page == PAGE_C) *(uint8_t *)PAGE_C_ADDRESS = mapper_current_segments[PAGE_C] = segment;
+        if (page == PAGE_D) *(uint8_t *)PAGE_D_ADDRESS = mapper_current_segments[PAGE_D] = segment;
+    }
+
+    INLINE void MAPPER_8K_FAST(uint8_t segment, Page page) { 
+        if (page == PAGE_A) *(uint8_t *)PAGE_A_ADDRESS = segment;
+        if (page == PAGE_B) *(uint8_t *)PAGE_B_ADDRESS = segment;
+        if (page == PAGE_C) *(uint8_t *)PAGE_C_ADDRESS = segment;
+        if (page == PAGE_D) *(uint8_t *)PAGE_D_ADDRESS = segment;
+    }
+#endif
+    
+#define USING_MODULE_APPEND(module, page) \
+    extern const uint8_t MAPPER_MODULE_ ## module ## _PAGE_A, \
+        MAPPER_MODULE_ ## module ## _PAGE_B, \
+        MAPPER_MODULE_ ## module ## _PAGE_C, \
+        MAPPER_MODULE_ ## module ## _PAGE_D
+
+#define USING_MODULE(module, page) USING_MODULE_APPEND(module, page)
+
+INLINE uint8_t mapper_load_segment(uint8_t segment, Page page) { uint8_t old = CURRENT_SEGMENT(page); UNUSED(segment); UNUSED(page); MAPPER(segment, page); return old; }
+#define mapper_load_module(module, page) mapper_load_segment(MODULE_SEGMENT(module, page), page)
+
+INLINE void mapper_load_segment_fast(uint8_t segment, Page page) { UNUSED(segment); UNUSED(page); MAPPER_FAST(segment, page); }
+#define mapper_load_module_fast(module, page) mapper_load_segment_fast(MODULE_SEGMENT(module, page), page)
+
+/*////////////////////////////////////////////////////////////////////////
+// MAPPER CALLING FUNCTIONS IN NORMAL PROGRAMMING MODE
+// 
+// PAGE_A IS FIXED, PAGE_B to PAGE_D are DYNAMIC.
+// calls FROM PAGE_A to PAGE_A are free.
+// calls FROM PAGE_M to PAGE_A are free.
+// calls FROM PAGE_A to PAGE_M must load the segment first.
+// calls FROM PAGE_M to PAGE_M must use a trampoline in PAGE_A. mapper_call supports basic functionality.
+    
+uint16_t mapper_call_a(uint8_t segment, uint16_t (*f)(uint16_t), uint16_t value);
+uint16_t mapper_call_b(uint8_t segment, uint16_t (*f)(uint16_t), uint16_t value);
+uint16_t mapper_call_c(uint8_t segment, uint16_t (*f)(uint16_t), uint16_t value);
+uint16_t mapper_call_d(uint8_t segment, uint16_t (*f)(uint16_t), uint16_t value);
+
+INLINE uint16_t mapper_call(Page page, uint8_t segment, uint16_t (*f)(uint16_t), uint16_t value) {
+    switch (page) {
+        case PAGE_A: return mapper_call_a(segment, f, value);
+        case PAGE_B: return mapper_call_b(segment, f, value);
+        case PAGE_C: return mapper_call_c(segment, f, value);
+        case PAGE_D: return mapper_call_d(segment, f, value);
+    }
+}
+
+#ifndef MAPPER
+    #define banked_call_segment(segment, page,  function, ...) function(__VA_ARGS__)
+    #define banked_call_module(module, page, function, ...) function(__VA_ARGS__)
+#else
+
+    extern void *banked_call_trampoline_PAGE_A;
+    extern void *banked_call_trampoline_PAGE_B;
+    extern void *banked_call_trampoline_PAGE_C;
+    extern void *banked_call_trampoline_PAGE_D;
+
+    #define declare_banked_call(page, ret, name, calls)
+        ret name ## _ ## page ## _trampoline calls
+
+    #define banked_call_segment(segment, page, function, name, ...) \
+    ( banked_call_prelude(segment, page, function), name ## _ ## page ## _trampoline(__VA_ARGS__) )
+
+    #define banked_call_segment(segment, page, function, type, ...) \
+    (*(type)&banked_call_trampoline_ ## page)(segment, (void *)function, __VA_ARGS__)
+      
+    #define banked_call_module(module, page, function, type, ...) banked_call_segment( MODULE_SEGMENT(module, page), page, function, type, __VA_ARGS__)
+    
+#endif
+*/
 
 ////////////////////////////////////////////////////////////////////////
 // IO FUNCTIONS
@@ -262,6 +332,7 @@ INLINE uint8_t msxhal_get_msx_version()   { return BIOS_ROMID; }
 
 typedef void (*isr_function)();
 isr_function msxhal_install_isr(isr_function);
+isr_function msxhal_install_segment_isr(uint8_t segment, isr_function);
 
 ////////////////////////////////////////////////////////////////////////
 // INIT FUNCTIONS

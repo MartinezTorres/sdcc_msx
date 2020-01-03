@@ -8,7 +8,7 @@ volatile uint8_t gif_v01_bufferId;
 
 static isr_function old_isr;
 
-USING_PAGE_B(psg);
+USING_MODULE(psg, PAGE_B);
 
 static void gif_v01_isr() { 
     
@@ -20,12 +20,14 @@ static void gif_v01_isr() {
 
 //    TMS99X8_setRegister(7,BWhite);
 
-    oldSegmentB = load_page_b(SEGMENT_TO_PAGE_B(psg));
+    oldSegmentB = mapper_load_module(psg, PAGE_B);
+    
     PSG_init();    
     ayr_spin();
     ayFX_spin();
     PSG_syncRegisters();
-    restore_page_b(oldSegmentB);    
+
+   	mapper_load_segment(oldSegmentB, PAGE_B);    
 
 //    TMS99X8_setRegister(7,BBlack);    
 }
@@ -38,14 +40,14 @@ void gif_v01_initVideo() {
     gif_v01_frames_left = 5;
     gif_v01_bufferId = 0;
     old_isr = msxhal_install_isr(&gif_v01_isr);
-    gif_v01_oldSegmentC = load_page_c(0);
-    gif_v01_oldSegmentD = load_page_d(0);
+    gif_v01_oldSegmentC = CURRENT_SEGMENT(PAGE_C);
+    gif_v01_oldSegmentD = CURRENT_SEGMENT(PAGE_D);
 }
 
 void gif_v01_deinitVideo() {
 
-    restore_page_d(gif_v01_oldSegmentD);
-    restore_page_c(gif_v01_oldSegmentC);
+   	mapper_load_segment(gif_v01_oldSegmentD, PAGE_D);    
+   	mapper_load_segment(gif_v01_oldSegmentC, PAGE_C);    
     msxhal_install_isr(old_isr);
 }
 
