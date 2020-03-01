@@ -148,21 +148,19 @@ typedef struct {
 } 
 TMS99X8_Register;
 
-////////////////////////////////////////////////////////////////////////
-// Mid Level Interface
+typedef struct {
+	union {
+		uint8_t status;
+        struct {
+            uint8_t illegalSprite : 5;
+            uint8_t C : 1;
+            uint8_t _5S : 1;
+            uint8_t _int : 1;		
+        };
+	};
+}
+TMS99X8_Status;
 
-//extern T_SA SA0, SA1;
-
-void TMS99X8_clear();
-
-void TMS99X8_setFlags(TMS99X8_TFlags flags);
-void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size);
-void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size);
-
-void TMS99X8_writeSprite8(uint8_t pos, const U8x8 s);
-void TMS99X8_writeSprite16(uint8_t pos, const U16x16 s);
-
-void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa);
 
 ////////////////////////////////////////////////////////////////////////
 // Low Level Interface
@@ -173,12 +171,26 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	__sfr __at 0x98 VDP0;
 	__sfr __at 0x99 VDP1;
 	TMS99X8_Register __at 0xF3DF TMS99X8;
+	TMS99X8_Status __at 0xF3E7 TMS99X8_status;
+    INLINE uint8_t TMS99X8_getStatusFromBios() { return TMS99X8_status.status; }
+    
+    INLINE uint8_t TMS99X8_readStatus() { return VDP1; }
 
 	INLINE void TMS99X8_syncRegister(uint8_t reg) {
 
 		VDP1 = TMS99X8.reg[reg];
 		VDP1 = 0x80 | reg;
 	}
+    
+
+	INLINE void TMS99X8_syncFlags() {
+
+		register uint8_t *r = (uint8_t *)TMS99X8;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 0;
+		VDP1 = *r++;
+		VDP1 = 0x80 | 1;
+	}    
 
 	INLINE void TMS99X8_syncAllRegisters() {
 
@@ -201,7 +213,7 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 		VDP1 = 0x80 | 7;
 	}
 
-	INLINE void TMS99X8_setAddressPtr(uint16_t dst) {
+	INLINE void TMS99X8_setPtr(uint16_t dst) {
 		VDP1 = dst & 0xFF; 
 		VDP1 = 0x40 | (dst>>8);
 	}
@@ -213,26 +225,87 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	extern TMS99X8_Register TMS99X8;
 	extern uint8_t TMS99X8VRAM[0x4000];
 	extern uint16_t TMS99X8VRAM_PTR;
+    
+    uint8_t TMS99X8_readStatus();
+    INLINE uint8_t TMS99X8_getStatusFromBios() { return TMS99X8_readStatus(); };
 	
 	inline static void TMS99X8_syncRegister(uint8_t reg) {(void)reg;}
+
+  	INLINE void TMS99X8_syncFlags() {
+		for (int i=0; i<2; i++)
+			TMS99X8_syncRegister(i);
+	}
+
 	INLINE void TMS99X8_syncAllRegisters() {
 		for (int i=0; i<8; i++)
 			TMS99X8_syncRegister(i);
 	}
 
-	INLINE void TMS99X8_setAddressPtr(uint16_t dst) { TMS99X8VRAM_PTR = dst; }
+	INLINE void TMS99X8_setPtr(uint16_t dst) { TMS99X8VRAM_PTR = dst; }
 	INLINE void TMS99X8_write(uint8_t val) { TMS99X8VRAM_PTR = TMS99X8VRAM_PTR | 0x4000; TMS99X8VRAM[TMS99X8VRAM_PTR] = val; TMS99X8VRAM_PTR++; }
 #endif
+
+
+////////////////////////////////////////////////////////////////////////
+// Mid Level Interface
+
+
+void TMS99X8_memcpy_slow(uint16_t dst, const uint8_t *src, uint16_t size);
+
+// FASTER TMS99X8 MEMCPY with fixed sizes
+void TMS99X8_memcpy8(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_memcpy16(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_memcpy32(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_memcpy64(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_memcpy128(const uint8_t *src) __z88dk_fastcall;
+
+void TMS99X8_fastcpy8(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_fastcpy16(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_fastcpy32(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_fastcpy64(const uint8_t *src) __z88dk_fastcall;
+void TMS99X8_fastcpy128(const uint8_t *src) __z88dk_fastcall;
+
+INLINE void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
+    if      (size ==   8) { TMS99X8_setPtr(dst); TMS99X8_memcpy8(src); }
+    else if (size ==  16) { TMS99X8_setPtr(dst); TMS99X8_memcpy16(src); }
+    else if (size ==  32) { TMS99X8_setPtr(dst); TMS99X8_memcpy32(src); }
+    else if (size ==  64) { TMS99X8_setPtr(dst); TMS99X8_memcpy64(src); }
+    else if (size == 128) { TMS99X8_setPtr(dst); TMS99X8_memcpy128(src); }
+    else TMS99X8_memcpy_slow(dst,src,size);
+}
+    
+void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size);
+
+
+void TMS99X8_clear();
+
+void TMS99X8_setFlags(TMS99X8_TFlags flags);
+
+
+
+
+void TMS99X8_writeSprite8(uint8_t pos, const U8x8 s);
+void TMS99X8_writeSprite16(uint8_t pos, const U16x16 s);
+
+INLINE void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa) { 
+    if (buffer) 
+        TMS99X8_memcpy(MODE2_ADDRESS_SA1, (const uint8_t *)sa, sizeof(T_SA)); 
+    else 
+        TMS99X8_memcpy(MODE2_ADDRESS_SA0, (const uint8_t *)sa, sizeof(T_SA)); 
+}
+
 
 ////////////////////////////////////////////////////////////////////////
 // Debug using Border Colors (only on MSX)
 
-#ifdef DEBUG
-INLINE void debugBorder(uint8_t v) {
-    TMS99X8_setRegister(7,v);
-}
+#if defined DEBUG && defined MSX
+
+#define debugBorder(v) do { VDP1 = v; VDP1 = 0x87; } while(false)
+
 #else
-INLINE void debugBorder() {}
+
+#define debugBorder(v) do { } while(false)
+
 #endif
 
 

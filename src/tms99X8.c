@@ -1,6 +1,141 @@
 #include <tms99X8.h>
 
 ////////////////////////////////////////////////////////////////////////
+// Memory Copy Functions
+
+#ifdef MSX
+
+void TMS99X8_memcpy_slow(uint16_t dst, const uint8_t *src, uint16_t size) {
+
+	register uint16_t sz = size;
+	register const uint8_t *p = src;
+	VDP1 = dst & 0xFF; 
+	VDP1 = 0x40 | (dst>>8);
+    
+	while (sz--) VDP0 = *p++;
+}
+
+void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
+
+	register uint16_t sz = size;
+	register const uint8_t val = value;
+	
+	VDP1 = dst & 0xFF; 
+	VDP1 = 0x40 | (dst>>8);
+	
+	while (sz--) VDP0 = val;
+}
+
+void TMS99X8_memcpy8(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm
+    ld c, #_VDP0
+    ld b, #8
+TMS99X8_memcpy8_l:
+    outi
+    jp nz, TMS99X8_memcpy8_l
+    __endasm;
+}
+void TMS99X8_memcpy16(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm
+    ld c, #_VDP0
+    ld b, #16
+TMS99X8_memcpy16_l:
+    outi
+    jp nz, TMS99X8_memcpy16_l
+    __endasm;
+}    
+void TMS99X8_memcpy32(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm
+    ld c, #_VDP0
+    ld b, #32
+TMS99X8_memcpy32_l:
+    outi
+    jp nz, TMS99X8_memcpy32_l
+    __endasm;
+}
+void TMS99X8_memcpy64(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm
+    ld c, #_VDP0
+    ld b, #64
+TMS99X8_memcpy64_l:
+    outi
+    jp nz, TMS99X8_memcpy64_l
+    __endasm;
+}
+void TMS99X8_memcpy128(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm
+    ld c, #_VDP0
+    ld b, #128
+TMS99X8_memcpy128_l:
+    outi
+    jp nz, TMS99X8_memcpy128_l
+    __endasm;
+}
+
+void TMS99X8_fastcpy8(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm__("ld c, #_VDP0");
+    REPEAT8(__asm__("outi"));
+}
+void TMS99X8_fastcpy16(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm__("ld c, #_VDP0");
+    REPEAT16(__asm__("outi"));
+}
+void TMS99X8_fastcpy32(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm__("ld c, #_VDP0");
+    REPEAT32(__asm__("outi"));
+}
+void TMS99X8_fastcpy64(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm__("ld c, #_VDP0");
+    REPEAT64(__asm__("outi"));
+}
+void TMS99X8_fastcpy128(const uint8_t *src) __z88dk_fastcall {
+    UNUSED(src);
+    __asm__("ld c, #_VDP0");
+    REPEAT64(__asm__("outi"));
+    REPEAT64(__asm__("outi"));
+}
+
+#else
+#include <string.h>
+
+TMS99X8_Register TMS99X8;
+uint8_t TMS99X8VRAM[0x4000];
+uint16_t TMS99X8VRAM_PTR;
+
+void TMS99X8_memcpy_slow(uint16_t dst, const uint8_t *src, uint16_t size) {
+	memcpy(&TMS99X8VRAM[dst], src, size);
+    TMS99X8VRAM_PTR = dst + size;
+}
+
+void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
+	memset(&TMS99X8VRAM[dst], value, size);
+    TMS99X8VRAM_PTR = dst + size;
+}
+
+void TMS99X8_memcpy8(const uint8_t *src) __z88dk_fastcall   { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,   8); TMS99X8VRAM_PTR+=  8;}
+void TMS99X8_memcpy16(const uint8_t *src) __z88dk_fastcall  { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,  16); TMS99X8VRAM_PTR+= 16;}
+void TMS99X8_memcpy32(const uint8_t *src) __z88dk_fastcall  { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,  32); TMS99X8VRAM_PTR+= 32;}
+void TMS99X8_memcpy64(const uint8_t *src) __z88dk_fastcall  { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,  64); TMS99X8VRAM_PTR+= 64;}
+void TMS99X8_memcpy128(const uint8_t *src) __z88dk_fastcall { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src, 128); TMS99X8VRAM_PTR+=128;}
+
+void TMS99X8_fastcpy8(const uint8_t *src) __z88dk_fastcall   { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,   8); TMS99X8VRAM_PTR+=  8;}
+void TMS99X8_fastcpy16(const uint8_t *src) __z88dk_fastcall  { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,  16); TMS99X8VRAM_PTR+= 16;}
+void TMS99X8_fastcpy32(const uint8_t *src) __z88dk_fastcall  { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,  32); TMS99X8VRAM_PTR+= 32;}
+void TMS99X8_fastcpy64(const uint8_t *src) __z88dk_fastcall  { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src,  64); TMS99X8VRAM_PTR+= 64;}
+void TMS99X8_fastcpy128(const uint8_t *src) __z88dk_fastcall { memcpy(&TMS99X8VRAM[TMS99X8VRAM_PTR], src, 128); TMS99X8VRAM_PTR+=128;}
+#endif
+
+
+////////////////////////////////////////////////////////////////////////
 // Mode2 Interface
 
 void TMS99X8_clear() {
@@ -82,9 +217,6 @@ void TMS99X8_activateBuffer1() {
 ////////////////////////////////////////////////////////////////////////
 // High Level Interface
 
-
-//T_SA SA0, SA1;
-
 void TMS99X8_setFlags(TMS99X8_TFlags flags) {
 	
 	
@@ -92,44 +224,6 @@ void TMS99X8_setFlags(TMS99X8_TFlags flags) {
 	TMS99X8_syncRegister(0);
 	TMS99X8_syncRegister(1);
 }
-
-#ifdef MSX
-void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
-
-	register uint16_t sz = size;
-	register const uint8_t *p = src;
-	VDP1 = dst & 0xFF; 
-	VDP1 = 0x40 | (dst>>8);
-	
-	while (sz--) VDP0 = *p++;
-}
-
-void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
-
-	register uint16_t sz = size;
-	register const uint8_t val = value;
-	
-	VDP1 = dst & 0xFF; 
-	VDP1 = 0x40 | (dst>>8);
-	
-	while (sz--) VDP0 = val;
-}
-#else
-#include <string.h>
-
-TMS99X8_Register TMS99X8;
-uint8_t TMS99X8VRAM[0x4000];
-uint16_t TMS99X8VRAM_PTR;
-
-void TMS99X8_memcpy(uint16_t dst, const uint8_t *src, uint16_t size) {
-	memcpy(&TMS99X8VRAM[dst], src, size);
-}
-
-void TMS99X8_memset(uint16_t dst, uint8_t value, uint16_t size) {
-	memset(&TMS99X8VRAM[dst], value, size);
-}
-#endif
-
 
 void TMS99X8_writeSprite8 (uint8_t pos, const U8x8   s) {
 	
@@ -163,10 +257,6 @@ void TMS99X8_writeSprite16(uint8_t pos, const U16x16 s) {
 	TMS99X8_memcpy(MODE2_ADDRESS_SG+(((uint16_t)pos)<<3), (const uint8_t *)s, 32);
 }
 
-void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa) {
-	
-	TMS99X8_memcpy(buffer?MODE2_ADDRESS_SA1:MODE2_ADDRESS_SA0, (const uint8_t *)sa, sizeof(T_SA));
-}
 
 ////////////////////////////////////////////////////////////////////////
 // Low Level Interface

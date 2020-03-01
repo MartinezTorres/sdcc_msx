@@ -33,6 +33,9 @@ static const RGB colors[16] = {
 { 255,  255,  255}	
 };
 
+static TMS99X8_Status TMS99X8_status;
+uint8_t TMS99X8_readStatus() { return TMS99X8_status.status; }
+ 
 static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const T_SA SA, const T_SG SG) {
 	
 	uint8_t pnMask = TMS99X8.pg11 & 3;
@@ -64,23 +67,33 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 	
 	
 	// SPRITES	
+    TMS99X8_status._5S = 0;
+    TMS99X8_status.illegalSprite = 31;
 	for (int i=0; i<TILE_HEIGHT*8; i++) {
 		
 		int maxSprite;
 		{
 			int nShownSprites=0;
 
-			for (maxSprite=0; maxSprite<N_SPRITES && SA[maxSprite].y!=208 && nShownSprites<4; maxSprite++) {
+			for (maxSprite=0; maxSprite<N_SPRITES; maxSprite++) {
 
 				uint8_t spriteLine = (i-SA[maxSprite].y-1) >> TMS99X8.magnifySprites;
 				
 				if (spriteLine>=8 * (1+TMS99X8.sprites16)) continue;
+                
+                if (SA[maxSprite].y==208) {  break; };
+                if (nShownSprites==4) { 
+                    if (TMS99X8_status._5S == 0)
+                        TMS99X8_status.illegalSprite = maxSprite; 
+                    TMS99X8_status._5S = 1; 
+                    break; 
+                }
 				nShownSprites++;
 			}
 		}
 
 
-		for (int j=maxSprite; j>=0; j--) {
+		for (int j=maxSprite-1; j>=0; j--) {
 
 			uint8_t spriteLine = (i-SA[j].y-1) >> TMS99X8.magnifySprites;
 			

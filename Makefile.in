@@ -7,7 +7,13 @@ MSG = "\033[1;32m[$(@)]\033[1;31m\033[0m"
 
 CCZ80 = sdcc
 ASM = sdasz80
-OPENMSX = openmsx -machine C-BIOS_MSX1  -carta 
+OPENMSX_BIN = openmsx
+OPENMSX_DEF = $(OPENMSX_BIN)                          $(OPENMSX_PARAM) -carta 
+OPENMSX1    = $(OPENMSX_BIN) -machine C-BIOS_MSX1     $(OPENMSX_PARAM) -carta 
+OPENMSX1_JP = $(OPENMSX_BIN) -machine C-BIOS_MSX1_JP  $(OPENMSX_PARAM) -carta 
+OPENMSX2    = $(OPENMSX_BIN) -machine C-BIOS_MSX2     $(OPENMSX_PARAM) -carta 
+OPENMSX2P   = $(OPENMSX_BIN) -machine C-BIOS_MSX2+_JP $(OPENMSX_PARAM) -carta 
+OPENMSXTR   = $(OPENMSX_BIN) -machine Panasonic_FS-A1GT $(OPENMSX_PARAM) -carta 
 HEXBIN = makebin -s 4194304
 
 MSX_LINKER = tmp/sdcc_msx/util/module_linker
@@ -119,7 +125,32 @@ rom: out/msx/$(NAME).rom
 msx: out/msx/$(NAME).rom
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	@$(OPENMSX) $< || true
+	@$(OPENMSX_DEF) $< || true
+
+msx1: out/msx/$(NAME).rom
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(OPENMSX1) $< || true
+
+msx1jp: out/msx/$(NAME).rom
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(OPENMSX1_JP) $< || true
+
+msx2: out/msx/$(NAME).rom
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(OPENMSX2) $< || true
+
+msx2p: out/msx/$(NAME).rom
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(OPENMSX2P) $< || true
+
+msxtr: out/msx/$(NAME).rom
+	@echo $(MSG)
+	@mkdir -p $(@D)
+	@$(OPENMSXTR) $< || true
 
 ##########################################################
 ### LINUX SECTION

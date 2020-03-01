@@ -48,6 +48,11 @@ typedef struct {
     union { int16_t y,i; };
 } int16_tp;
 
+typedef struct {
+    union { uint16_t x,j; };
+    union { uint16_t y,i; };
+} uint16_tp;
+
 typedef uint16_t U16x16[16];
 typedef uint8_t  U8x8  [8];
 
@@ -217,6 +222,8 @@ INLINE uint8_t mapper_load_segment(uint8_t segment, Page page) { uint8_t old = C
 
 INLINE void mapper_load_segment_fast(uint8_t segment, Page page) { UNUSED(segment); UNUSED(page); MAPPER_FAST(segment, page); }
 #define mapper_load_module_fast(module, page) mapper_load_segment_fast(MODULE_SEGMENT(module, page), page)
+
+#define CALL_PAGE(module, page, a) do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false);
 
 /*////////////////////////////////////////////////////////////////////////
 // MAPPER CALLING FUNCTIONS IN NORMAL PROGRAMMING MODE
