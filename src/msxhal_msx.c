@@ -55,28 +55,28 @@ void msxhal_init() {
 		add ix,sp
 		
 		ld A,#0x00
-		ld (#0x5000),A ; // Konami5 mapper init
-		ld (#0x5000),A ; // Konami5 mapper init
-		ld (#0x5000),A ; // Konami5 mapper init
-		ld (#0x5000),A ; // Konami5 mapper init
+		ld (# PAGE_A_ADDRESS),A ; // Mapper init
+		ld (# PAGE_A_ADDRESS),A ; // Mapper init
+		ld (# PAGE_A_ADDRESS),A ; // Mapper init
+		ld (# PAGE_A_ADDRESS),A ; // Mapper init
 
 		inc A
-		ld (#0x7000),A ; // Konami5 mapper init
-		ld (#0x7000),A ; // Konami5 mapper init
-		ld (#0x7000),A ; // Konami5 mapper init
-		ld (#0x7000),A ; // Konami5 mapper init
+		ld (# PAGE_B_ADDRESS),A ; // Mapper init
+		ld (# PAGE_B_ADDRESS),A ; // Mapper init
+		ld (# PAGE_B_ADDRESS),A ; // Mapper init
+		ld (# PAGE_B_ADDRESS),A ; // Mapper init
 
 		inc A
-		ld (#0x9000),A ; // Konami5 mapper init
-		ld (#0x9000),A ; // Konami5 mapper init
-		ld (#0x9000),A ; // Konami5 mapper init
-		ld (#0x9000),A ; // Konami5 mapper init
+		ld (# PAGE_C_ADDRESS),A ; // Mapper init
+		ld (# PAGE_C_ADDRESS),A ; // Mapper init
+		ld (# PAGE_C_ADDRESS),A ; // Mapper init
+		ld (# PAGE_C_ADDRESS),A ; // Mapper init
 
 		inc A
-		ld (#0xB000),A ; // Konami5 mapper init
-		ld (#0xB000),A ; // Konami5 mapper init
-		ld (#0xB000),A ; // Konami5 mapper init
-		ld (#0xB000),A ; // Konami5 mapper init
+		ld (# PAGE_D_ADDRESS),A ; // Mapper init
+		ld (# PAGE_D_ADDRESS),A ; // Mapper init
+		ld (# PAGE_D_ADDRESS),A ; // Mapper init
+		ld (# PAGE_D_ADDRESS),A ; // Mapper init
 
 		; Set new ISR vector
 		ld A,#0xC3 ; opcode for JP

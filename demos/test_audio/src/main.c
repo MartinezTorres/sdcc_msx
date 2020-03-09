@@ -5,7 +5,7 @@
 #include <tms99X8.h>
 
 #include <monospace.h>
-USING_PAGE_C(monospace);
+USING_MODULE(monospace,PAGE_C);
 
 #include <tile.h>
 #include <msx_string.h>
@@ -13,12 +13,12 @@ USING_PAGE_C(monospace);
 
 
 #include <res/fonts/font1.png.h>
-USING_PAGE_D(font1_png);
+USING_MODULE(font1_png,PAGE_D);
 
 T_M2_MS_Font mainFont;
 static void initFont() {
 
-    uint8_t oldPageD = load_page_d(SEGMENT_TO_PAGE_D(font1_png));
+    uint8_t oldSegmentPageD = mapper_load_module(font1_png, PAGE_D);
 
     //static const U8x8 color0 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
     //static const U8x8 color1 = {BBlack+FDarkBlue, BBlack+FMagenta, BBlack+FMediumRed, BBlack+FLightRed, BBlack+FDarkYellow, BBlack+FLightBlue, BBlack+FDarkBlue, BBlack+FCyan};
@@ -31,11 +31,11 @@ static void initFont() {
 	//M2_MS_transformBorder, // The color 1 will be applied to a "bold" version of the font.
 	color0); 
 	
-    restore_page_d(oldPageD);
+    mapper_load_segment(oldSegmentPageD, PAGE_D);
 }
 
 #include <psg.h>
-USING_PAGE_B(psg);
+USING_MODULE(psg,PAGE_B);
 
 typedef struct {
     
@@ -48,18 +48,18 @@ typedef struct {
 // Load AFB sources
 
 #include <res/ayfx/test.afb.h>
-USING_PAGE_C(test_afb);
+USING_MODULE(test_afb,PAGE_D);
 
 #include <res/ayfx/streetsofrage_2.afb.h>
-USING_PAGE_C(streetsofrage_2_afb);
+USING_MODULE(streetsofrage_2_afb,PAGE_D);
 
 #include <res/ayfx/zedragon.afb.h>
-USING_PAGE_C(zedragon_afb);
+USING_MODULE(zedragon_afb,PAGE_D);
 
 static const AudioMenuItem afbItems[] = {
-    { "zedragon", SEGMENT_TO_PAGE_C(zedragon_afb), zedragon_afb },
-    { "streetsofrage2", SEGMENT_TO_PAGE_C(streetsofrage_2_afb), streetsofrage_2_afb },
-    { "test", SEGMENT_TO_PAGE_C(test_afb), test_afb },
+    { "zedragon", MODULE_SEGMENT(zedragon_afb,PAGE_D), zedragon_afb },
+    { "streetsofrage2", MODULE_SEGMENT(streetsofrage_2_afb,PAGE_D), streetsofrage_2_afb },
+    { "test", MODULE_SEGMENT(test_afb,PAGE_D), test_afb },
 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,7 @@ void audio_isr(void);
 
 void audio_isr(void) {
     
-    uint8_t oldSegmentPageB = load_page_b(SEGMENT_TO_PAGE_B(psg));
+    uint8_t oldSegmentPageB = mapper_load_module(psg, PAGE_B);
 
     TMS99X8_setRegister(7,BWhite);
     PSG_init();    
@@ -92,7 +92,7 @@ void audio_isr(void) {
     PSG_syncRegisters();
     
     TMS99X8_setRegister(7,BWhite);
-    restore_page_b(oldSegmentPageB);    
+    mapper_load_segment(oldSegmentPageB, PAGE_B);
 
     TMS99X8_setRegister(7,BBlack);    
 }
@@ -109,11 +109,13 @@ int main(void) {
     
     // Normal initialization routine
     msxhal_init(); // Bare minimum initialization of the msx support 
+    DI();
+    
     Tiles_init(); // It initializes the global tile storage (i.e., to allow to load a font afterwards)
     TMS99X8_activateMode2(MODE2_ALL_ROWS); // Activates mode 2 and clears the screen (in black)
     
-    load_page_b(SEGMENT_TO_PAGE_B(psg));
-    load_page_c(SEGMENT_TO_PAGE_C(monospace));
+    mapper_load_module(psg, PAGE_B);
+    mapper_load_module(monospace, PAGE_C);
     
     ayr_init();
     ayFX_init();
