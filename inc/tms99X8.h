@@ -7,41 +7,41 @@
 
 
 typedef enum {
-BTransparent=0x0,
-BBlack,
-BMediumGreen,
-BLightGreen,
-BDarkBlue,  	
-BLightBlue,
-BDarkRed,
-BCyan,
-BMediumRed,
-BLightRed,
-BDarkYellow,
-BLightYellow,
-BDarkGreen,
-BMagenta,
-BGray,
-BWhite} 
+BTransparent  =0x00U,
+BBlack        =0x01U,
+BMediumGreen  =0x02U,
+BLightGreen   =0x03U,
+BDarkBlue     =0x04U,
+BLightBlue    =0x05U,
+BDarkRed      =0x06U,
+BCyan         =0x07U,
+BMediumRed    =0x08U,	
+BLightRed     =0x09U,
+BDarkYellow   =0x0AU,
+BLightYellow  =0x0BU,
+BDarkGreen    =0x0CU,
+BMagenta      =0x0DU,
+BGray         =0x0EU,
+BWhite        =0x0FU}
 TMS99X8_BackgroundColor;
 
 typedef enum {
-FTransparent=0x00,
-FBlack=0x10,
-FMediumGreen=0x20,
-FLightGreen=0x30,
-FDarkBlue=0x40,
-FLightBlue=0x50,
-FDarkRed=0x60,
-FCyan=0x70,
-FMediumRed=0x80,	
-FLightRed=0x90,
-FDarkYellow=0xA0,
-FLightYellow=0xB0,
-FDarkGreen=0xC0,
-FMagenta=0xD0,
-FGray=0xE0,
-FWhite=0xF0} 
+FTransparent  =0x00U,
+FBlack        =0x10U,
+FMediumGreen  =0x20U,
+FLightGreen   =0x30U,
+FDarkBlue     =0x40U,
+FLightBlue    =0x50U,
+FDarkRed      =0x60U,
+FCyan         =0x70U,
+FMediumRed    =0x80U,	
+FLightRed     =0x90U,
+FDarkYellow   =0xA0U,
+FLightYellow  =0xB0U,
+FDarkGreen    =0xC0U,
+FMagenta      =0xD0U,
+FGray         =0xE0U,
+FWhite        =0xF0U} 
 TMS99X8_ForegroundColor;
 
 
@@ -242,7 +242,7 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	}
 
 	INLINE void TMS99X8_setPtr(uint16_t dst) { TMS99X8VRAM_PTR = dst; }
-	INLINE void TMS99X8_write(uint8_t val) { TMS99X8VRAM_PTR = TMS99X8VRAM_PTR | 0x4000; TMS99X8VRAM[TMS99X8VRAM_PTR] = val; TMS99X8VRAM_PTR++; }
+	INLINE void TMS99X8_write(uint8_t val) { TMS99X8VRAM_PTR = TMS99X8VRAM_PTR & 0x3FFF; TMS99X8VRAM[TMS99X8VRAM_PTR] = val; TMS99X8VRAM_PTR++; }
 #endif
 
 

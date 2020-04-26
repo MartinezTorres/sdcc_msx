@@ -209,7 +209,7 @@ int main(int argc, char *argv[]) {
 			romName = std::string(argv[i]);
 	
 	
-	std::set<std::string> known_areas = { "_CODE", "_DATA", "_GSINIT", "_GSFINAL", "_HEADER0" };
+	std::set<std::string> known_areas = { "_CODE", "_DATA", "_GSINIT", "_GSFINAL", "_HEADER0", "_HOME" };
 	std::vector<REL> rels;
 	
 	// PREPROCESS ALL INPUT FILES
@@ -271,7 +271,7 @@ int main(int argc, char *argv[]) {
 				isl >> area.name >> AR("size") >> HEX(area.size,HEX::PLAIN) 
 					>> AR("flags") >> flags 
 					>> AR("addr") >> HEX(area.addr,HEX::PLAIN);
-				
+				                
 				if (flags==0) {
 					area.type = REL::AREA::RELATIVE;
 				} else if (flags==8) {
@@ -411,12 +411,12 @@ int main(int argc, char *argv[]) {
 				rom_ptr += area.size;
 			}
 		}
-		
+
 		for (auto &rel : rels) {
 			if (not rel.enabled) continue;
 			if (not rel.page==0) continue;
 			for (auto &area:  rel.areas) {
-				if (area.name!="_CODE") continue;
+				if (area.name!="_CODE" and area.name!="_HOME") continue;
 				if (area.type != REL::AREA::RELATIVE) throw std::runtime_error(area.name + " not relative: " + rel.filename);
 
 				area.addr = rom_ptr;

@@ -335,6 +335,37 @@ INLINE uint8_t msxhal_get_basic_version() { return BIOS_IDBYT2 & 0xF0; }
 INLINE uint8_t msxhal_get_msx_version()   { return BIOS_ROMID; }
 
 ////////////////////////////////////////////////////////////////////////
+// TURBO FUNCTIONS
+
+#ifdef MSX
+
+INLINE void msxhal_request60Hz() {
+    __asm
+    ld   hl,#0xFFE8
+    ld   a,(hl)
+    and   #0xFD
+    ld   (hl),a
+    out  (_VDP1),a
+    ld   a,#0x89
+    out  (_VDP1),a
+    __endasm; 
+}
+
+INLINE void msxhal_enableR800() {
+    __asm
+    ld   A,(#0x0180) ; CHGCPU
+    cp   #0xC3
+    ld   a,#0x81              ; can be ld a,81h for R800 ROM if you wish
+    call z,#0x0180
+    __endasm; 
+}
+#else
+INLINE void msxhal_request60Hz() {}
+INLINE void msxhal_enableR800() {}
+#endif
+
+
+////////////////////////////////////////////////////////////////////////
 // ISR FUNCTIONS
 
 typedef void (*isr_function)();
