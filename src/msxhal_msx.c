@@ -42,18 +42,14 @@ void msxhal_init() {
 
 	custom_isr = nullptr;
 	// Install our ISR 
-	
+#ifdef PAGE_A_ADDRESS
 	mapper_current_segments[0] = 0;
 	mapper_current_segments[1] = 1;
 	mapper_current_segments[2] = 2;
 	mapper_current_segments[3] = 3;
 
 	__asm
-
-		push ix
-		ld ix,#0
-		add ix,sp
-		
+	
 		ld A,#0x00
 		ld (# PAGE_A_ADDRESS),A ; // Mapper init
 		ld (# PAGE_A_ADDRESS),A ; // Mapper init
@@ -77,6 +73,16 @@ void msxhal_init() {
 		ld (# PAGE_D_ADDRESS),A ; // Mapper init
 		ld (# PAGE_D_ADDRESS),A ; // Mapper init
 		ld (# PAGE_D_ADDRESS),A ; // Mapper init
+
+	__endasm;
+
+#endif
+
+	__asm
+
+		push ix
+		ld ix,#0
+		add ix,sp
 
 		; Set new ISR vector
 		ld A,#0xC3 ; opcode for JP

@@ -3,9 +3,9 @@
 //
 // Manuel Martinez (salutte@gmail.com)
 //
-// FLAGS: -std=c++14 -g `pkg-config opencv --cflags --libs`
+// FLAGS: -std=c++14 -g `pkg-config opencv4 --cflags --libs`
 
-#include <opencv/cv.h>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui.hpp>
 #include <iostream>
 #include <vector>

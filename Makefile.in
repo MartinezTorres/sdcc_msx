@@ -175,7 +175,7 @@ INCLUDE := util
 tmp/%: %.cc
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	@$(CXX) -o $@ $< $(CCFLAGS_LINUX) $(shell echo `grep -m1 "^// FLAGS:" $< | cut -d: -f2-`)
+	@$(CXX) -o $@ $< $(shell echo `grep -m1 "^// FLAGS:" $< | cut -d: -f2-`)
 
 %: util/%.cc bin/% 
 	@echo $(MSG)

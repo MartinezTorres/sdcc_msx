@@ -223,7 +223,10 @@ INLINE uint8_t mapper_load_segment(uint8_t segment, Page page) { uint8_t old = C
 INLINE void mapper_load_segment_fast(uint8_t segment, Page page) { UNUSED(segment); UNUSED(page); MAPPER_FAST(segment, page); }
 #define mapper_load_module_fast(module, page) mapper_load_segment_fast(MODULE_SEGMENT(module, page), page)
 
-#define CALL_PAGE(module, page, a) do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false);
+#define CALL_PAGE(module, page, a) do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false)
+
+#define IN_MODULE(module, page, a) do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false)
+#define IN_SEGMENT(segment, page, a) do { uint8_t o = mapper_load_segment(segment, page); a;  mapper_load_segment(o, page); } while(false)
 
 /*////////////////////////////////////////////////////////////////////////
 // MAPPER CALLING FUNCTIONS IN NORMAL PROGRAMMING MODE

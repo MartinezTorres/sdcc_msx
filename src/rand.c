@@ -6,21 +6,57 @@
 static uint16_t rand16_seed1;
 static uint16_t rand16_seed2;
 
-uint16_t rand16() {
+
+#ifdef MSX
+static void rand16_placeholder(void) {	
+    __asm
+    _rand16::
+	push bc
+    ld hl,(#_rand16_seed1)
+    ld b,l
+    ld c,h
+    add hl,hl
+    add hl,hl
+    inc l
+    add hl,bc
+    ld (#_rand16_seed1),hl
+    ld hl,(#_rand16_seed2)
+    add hl,hl
+    sbc a, a
+    add a, #45
+    xor a,l
+    ld l,a
+    ld (#_rand16_seed2),hl
+;    ld a, c
+;    ld c, b
+;    ld b, a
+    add hl,bc
+    pop bc
+    ret	
+    __endasm;
+}
+#else
 	
-	uint16_t hl = rand16_seed1 + 0xAAAA;
+uint16_t rand16() {
+
+	uint16_t hl = rand16_seed1;
 	uint16_t bc = (hl<<8) + (hl>>8);
-	hl += hl;
-	hl += hl;
+	hl <<= 2;
 	hl++;
 	hl += bc;
 	rand16_seed1 = hl;
-	hl = rand16_seed2 + 0x5555;
-	hl += hl;
-	hl = 45 ^ hl;
+	hl = rand16_seed2;
+    if (hl&0x8000) {
+        hl = 44 ^ (hl<<1);
+    } else {
+        hl = 45 ^ (hl<<1);
+    }
 	rand16_seed2 = hl;
 	hl += bc;
 	return hl;
+}
+
+#endif
 	
 	/* if need to be:
 // from: http://wikiti.brandonw.net/index.php?title=Z80_Routines:Math:Random
@@ -49,15 +85,14 @@ prng16:
     ret	
 
 	*/
-}
 	
 void rand16_seed(uint16_t seed1, uint16_t seed2) {
 
 //  (seed1) contains a 16-bit seed value
 //  (seed2) contains a NON-ZERO 16-bit seed value
-    
-    rand16_seed1 = seed1;
-    rand16_seed2 = seed2;
+    rand16_seed1 = seed1 ^ 0xDEAD;
+    rand16_seed2 = seed2 ^ 0xC0DE;
+    if (rand16_seed2==0) seed2++;
 }
 
 void rand16_seedTime() {
