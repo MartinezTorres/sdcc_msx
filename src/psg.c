@@ -73,9 +73,11 @@ typedef struct {
 
 typedef struct {
 	
-	const AYR *ayr;
-	uint8_t segment;
+	AYR ayr;
+    bool busy, paused;
 	uint8_t frameCount;
+    int8_t volume;
+    int8_t fade_out;
 	
 	T_AYR_Channel_Status channels[3];
 } T_AYR_Status;
@@ -86,37 +88,51 @@ static T_AYR_Status ayr_status;
 
 void ayr_init() {
 	
-	ayr_play(nullptr, 0); 
+	ayr_play(nullptr); 
 }
 
-void ayr_play(const AYR *ayr, uint8_t segment) {
-		
-	ayr_status.ayr = ayr;
-	ayr_status.segment = segment;
+
+
+void ayr_play(const AYR *ayr) {
+    
+	ayr_status.busy = false;
+    ayr_status.paused = 0;
 	ayr_status.frameCount = 0;
+    ayr_status.volume = 0;
+    ayr_status.fade_out = 0;
 	
 	if (ayr==nullptr) return;
-	{
-		uint8_t oldSegmentPageD = mapper_load_segment(segment, PAGE_D);
+    
+    memcpy(&ayr_status.ayr, ayr, sizeof(AYR));
+	ayr_status.busy = true;
+    
+    memset(ayr_registers.reg,0,14);
+    ayr_registers.enable.value = 0xFF;
 
-		memset(ayr_registers.reg,0,14);
-		ayr_registers.enable.value = 0xFF;
-
-		ayr_status.channels[0].duration = 1;
-		ayr_status.channels[1].duration = 1;
-		ayr_status.channels[2].duration = 1;
-		
-		ayr_status.channels[0].p = ayr->channels[0];
-		ayr_status.channels[1].p = ayr->channels[1];
-		ayr_status.channels[2].p = ayr->channels[2];
-		
-		mapper_load_segment(oldSegmentPageD, PAGE_D);    
-	}
+    ayr_status.channels[0].duration = 1;
+    ayr_status.channels[1].duration = 1;
+    ayr_status.channels[2].duration = 1;
+    
+    ayr_status.channels[0].p = ayr_status.ayr.channel[0].data;
+    ayr_status.channels[1].p = ayr_status.ayr.channel[1].data;
+    ayr_status.channels[2].p = ayr_status.ayr.channel[2].data;
 }
 
-static uint8_t ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
+void ayr_restart() { ayr_play(&ayr_status.ayr); }
+void ayr_pause() { ayr_status.paused = true; }
+void ayr_resume() { ayr_status.paused = false; }
+void ayr_stop() { ayr_init(); }
+void ayr_set_volume(int8_t volume) {ayr_status.volume = volume;}
+void ayr_fade_out(int8_t fade_out) {ayr_status.fade_out = fade_out;}
 
-	if (chan->duration == 0) return 0; 
+INLINE uint8_t ayr_spin_channel( uint8_t i ) {
+    
+    T_AYR_Channel_Status *chan = &ayr_status.channels[i];
+
+	if (chan->duration == 0) {
+        ayr_registers.amplitude[i].volume = 0;
+        return 0;
+    }
 	// We return true iff the chanel has finished playing.
 	
 	if (--chan->duration) return 1;
@@ -124,6 +140,27 @@ static uint8_t ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
 	{
 		uint8_t meta = *chan->p++;
 
+        {
+            uint8_t vol = (meta & 0x0F) + 16 + (ayr_status.volume/16);
+            if (vol>16+15) vol = 16+15;
+            if (vol<16) vol = 16;
+            vol -= 16;
+            
+            ayr_registers.amplitude[i].volume = vol;
+        }
+
+		{
+			uint8_t duration = (meta&0x70)>>4;
+					
+			if ( duration == 0x07 )
+				duration = *chan->p++;
+
+			chan->duration = duration;
+
+            for (uint8_t j=0; j<i; j++) printf("                ");
+            printf("%d: %X (%02X)\n", i, (meta & 0x0F), duration);
+		}
+        
 		if ( !!(meta & 0x80) ) {
 			
 			uint8_t tone = *chan->p++;
@@ -164,43 +201,51 @@ static uint8_t ayr_spin_channel( T_AYR_Channel_Status *chan, uint8_t i ) {
 			}
 		}
 
-		ayr_registers.amplitude[i].volume = meta & 0x0F;
-
-		{
-			uint8_t duration = (meta&0x70)>>4;
-					
-			if ( duration == 0x07 )
-				duration = *chan->p++;
-
-			chan->duration = duration;
-		}
 	}	
 	return 1;	
 }
 
-void ayr_spin() {
+
+static uint8_t ayr_spin_channel_0() { uint8_t r; IN_SEGMENT(ayr_status.ayr.channel[0].segment, PAGE_D, r=ayr_spin_channel(0);); return r;}
+static uint8_t ayr_spin_channel_1() { uint8_t r; IN_SEGMENT(ayr_status.ayr.channel[1].segment, PAGE_D, r=ayr_spin_channel(1);); return r;}
+static uint8_t ayr_spin_channel_2() { uint8_t r; IN_SEGMENT(ayr_status.ayr.channel[2].segment, PAGE_D, r=ayr_spin_channel(2);); return r;}
+
+bool ayr_spin() {
 		
-	if (ayr_status.ayr==nullptr) return;
+	if (ayr_status.busy==false) return false;
+    if (ayr_status.paused==true) return true;
+    
 	if (msxhal_get_interrupt_frequency()==MSX_FREQUENCY_60HZ) {
 
 		if (++ayr_status.frameCount == 6) {
 			ayr_status.frameCount=0;
 			memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
-			return;
+			return true;
 		}
 	}
 	
+    {
+        ayr_status.volume -= ayr_status.fade_out;
+    }
+    
+    {
+        if (ayr_status.volume<-120) {
+			ayr_status.busy=false;
+            return false;
+        }
+    }
+    
 	{
-		uint8_t oldSegmentPageD = mapper_load_segment(ayr_status.segment, PAGE_D);
-		if (ayr_spin_channel(&ayr_status.channels[0],0) +
-			ayr_spin_channel(&ayr_status.channels[1],1) +
-			ayr_spin_channel(&ayr_status.channels[2],2) == 0) {
-			ayr_status.ayr = nullptr;
+		if (ayr_spin_channel_0() +
+			ayr_spin_channel_1() +
+			ayr_spin_channel_2() == 0) {
+			ayr_status.busy=false;
+            return false;
 		}
-		mapper_load_segment(oldSegmentPageD, PAGE_D);    
 	}
 
 	memcpy(AY_3_8910_Registers.reg, ayr_registers.reg, sizeof(AY_3_8910_Registers));
+    return true;
 }
 
 

@@ -126,6 +126,7 @@ typedef uint8_t  U8x8  [8];
 	
 	#define memset(d,c,n) __builtin_memset(d,c,n);
 	#define memcpy(d,s,n) __builtin_memcpy(d,s,n);
+	#define strcpy(d,s) __builtin_strcpy(d,s);
 
 #elif LINUX
 
@@ -187,10 +188,18 @@ typedef enum { PAGE_A=0, PAGE_B=1, PAGE_C=2, PAGE_D=3 } Page;
     #define MAPPER_FAST(segment, page) do {} while(false)
 	#define MODULE_SEGMENT(module, page) 0
     #define CURRENT_SEGMENT(page) 0
+    #define msxhal_call_b(segment, a) do { a(); } while(false)
+    #define msxhal_call_c(segment, a) do { a(); } while(false)
+    #define msxhal_call_d(segment, a) do { a(); } while(false)
+    
 #else
 	#define MODULE_SEGMENT_APPEND(module, page) ((const uint8_t)&MAPPER_MODULE_ ## module ## _ ## page)
 	#define MODULE_SEGMENT(module, page) MODULE_SEGMENT_APPEND( module, page)
     #define CURRENT_SEGMENT(page) mapper_current_segments[page] 
+    typedef void (*call_function)();
+	void msxhal_call_b(uint8_t segment, call_function f);
+	void msxhal_call_c(uint8_t segment, call_function f);
+	void msxhal_call_d(uint8_t segment, call_function f);
 
     extern uint8_t mapper_current_segments[4];
 
@@ -209,24 +218,26 @@ typedef enum { PAGE_A=0, PAGE_B=1, PAGE_C=2, PAGE_D=3 } Page;
     }
 #endif
     
-#define USING_MODULE_APPEND(module, page) \
+#define USING_MODULE(module, page) \
     extern const uint8_t MAPPER_MODULE_ ## module ## _PAGE_A, \
         MAPPER_MODULE_ ## module ## _PAGE_B, \
         MAPPER_MODULE_ ## module ## _PAGE_C, \
         MAPPER_MODULE_ ## module ## _PAGE_D
-
-#define USING_MODULE(module, page) USING_MODULE_APPEND(module, page)
-
+        
 INLINE uint8_t mapper_load_segment(uint8_t segment, Page page) { uint8_t old = CURRENT_SEGMENT(page); UNUSED(segment); UNUSED(page); MAPPER(segment, page); return old; }
 #define mapper_load_module(module, page) mapper_load_segment(MODULE_SEGMENT(module, page), page)
 
 INLINE void mapper_load_segment_fast(uint8_t segment, Page page) { UNUSED(segment); UNUSED(page); MAPPER_FAST(segment, page); }
 #define mapper_load_module_fast(module, page) mapper_load_segment_fast(MODULE_SEGMENT(module, page), page)
 
-#define CALL_PAGE(module, page, a) do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false)
+#define CALL_PAGE(module, page, a) { do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false); }
 
-#define IN_MODULE(module, page, a) do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false)
-#define IN_SEGMENT(segment, page, a) do { uint8_t o = mapper_load_segment(segment, page); a;  mapper_load_segment(o, page); } while(false)
+#define CALL_B(module, a) msxhal_call_b(MODULE_SEGMENT(module, PAGE_B), a)
+#define CALL_C(module, b) msxhal_call_c(MODULE_SEGMENT(module, PAGE_C), b)
+#define CALL_D(module, c) msxhal_call_d(MODULE_SEGMENT(module, PAGE_D), c)
+
+#define IN_MODULE(module, page, a) { do { uint8_t o = mapper_load_module(module, page); a;  mapper_load_segment(o, page); } while(false); }
+#define IN_SEGMENT(segment, page, a) { do { uint8_t o = mapper_load_segment(segment, page); a;  mapper_load_segment(o, page); } while(false); }
 
 /*////////////////////////////////////////////////////////////////////////
 // MAPPER CALLING FUNCTIONS IN NORMAL PROGRAMMING MODE

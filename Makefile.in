@@ -50,8 +50,9 @@ BINARIES_SRC += $(call rwildcard, res/fonts/, *.png)
 BINARIES_SRC += $(call rwildcard, res/ayfx/, *.afb *.afx)
 BINARIES_SRC += $(call rwildcard, res/midi/, *.mid)
 
-BINARIES_GEN := $(patsubst %, tmp/%.c, $(BINARIES_SRC))
-HEADERS      += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
+BINARIES_GEN += $(patsubst %, tmp/%.c, $(BINARIES_SRC))
+HEADERS_GEN  += $(patsubst %, tmp/inc/%.h, $(BINARIES_SRC))
+HEADERS      += $(HEADERS_GEN)
 SOURCES_C    += $(BINARIES_GEN)
 
 tmp/%.c: tmp/inc/%.h
@@ -77,6 +78,13 @@ tmp/inc/res/ayfx/%.h: res/ayfx/% tmp/sdcc_msx/util/mkBinary
 	@tmp/sdcc_msx/util/mkBinary $< > tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
+	
+tmp/inc/resources.h: $(HEADERS_GEN)
+	@echo $(MSG)
+	@mkdir -p tmp/$(<D)
+	@rm -f $@
+	@for f in $(HEADERS_GEN); do echo "#include <../../$$f>"; done > $@
+	
 
 
 ##########################################################
@@ -86,12 +94,12 @@ OBJ_C      = $(addprefix tmp/,$(SOURCES_C:.c=.rel))
 
 .PRECIOUS: tmp/%.ihx $(OBJ_ASM) $(OBJ_C) tmp/%.lib $(SOURCES_C) $(HEADERS)
 
-tmp/%.rel: %.s $(HEADERS) 
+tmp/%.rel: %.s tmp/inc/resources.h $(HEADERS) 
 	@echo $(MSG)
 	@mkdir -p $(@D)
 	@cd tmp && $(ASM) -o ../$@ ../$<
 
-tmp/%.rel: %.c $(HEADERS)
+tmp/%.rel: %.c tmp/inc/resources.h $(HEADERS)
 	@echo -n $(MSG)
 	@mkdir -p $(@D)
 	@$(CCZ80) -c -D MSX $(INCLUDES) $(CCFLAGS_MSX) $< -o $@

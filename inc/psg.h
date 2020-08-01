@@ -60,10 +60,23 @@ uint8_t ayFX_afb_getNSounds(const uint8_t *afb, uint8_t segment);
 void ayFX_afb(const uint8_t *afb, uint8_t segment, uint8_t idx, uint8_t priority, int8_t adjustedVolume);
 void ayFX_spin();
 
-typedef struct { const uint8_t *channels[3]; } AYR;
+typedef struct { 
+    const uint8_t *data; 
+    const uint8_t segment; 
+} AYR_CHANNEL;
+
+typedef struct { 
+    AYR_CHANNEL channel[3];
+} AYR;
 
 void ayr_init();
-void ayr_play(const AYR *ayr, uint8_t segment);
-void ayr_spin();
+void ayr_restart();
+void ayr_pause();
+void ayr_resume();
+void ayr_stop();
+void ayr_play(const AYR *ayr);
+bool ayr_spin();
+void ayr_set_volume(int8_t volume);
+void ayr_fade_out(int8_t fade_out);
 
 

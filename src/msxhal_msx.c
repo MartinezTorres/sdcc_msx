@@ -133,16 +133,20 @@ inline static void msxhal_getch_placeholder(void) {
 	__asm
 	_msxhal_getch::
 		call #0x009C      ; call CHSNS
-		jr nz,00001$    ; skip if there is no buffer
 		ld l,#0
-		ret
-00001$:
+        di
+		ret z
 		call #0x009f		; call CHGET
 		ld l,a
+        di
 		ret
 	__endasm;	
 
 
 }
+
+void msxhal_call_b(uint8_t segment, call_function f) { IN_SEGMENT(segment, PAGE_B, (*f)() ); }
+void msxhal_call_c(uint8_t segment, call_function f) { IN_SEGMENT(segment, PAGE_C, (*f)() ); }
+void msxhal_call_d(uint8_t segment, call_function f) { IN_SEGMENT(segment, PAGE_D, (*f)() ); }
 
 #endif

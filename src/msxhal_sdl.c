@@ -167,6 +167,12 @@ static inline void keyboard_update(SDL_Event e) {
 	case SDL_KEYDOWN:
 		//printf("KEY PRESSED: %d\n",e.key.keysym.sym);
 		keys[e.key.keysym.sym%N_KEYS] = true;
+		
+		if (e.key.keysym.sym==SDLK_RIGHT) e.key.keysym.sym =  0x1C; 
+		if (e.key.keysym.sym==SDLK_LEFT ) e.key.keysym.sym =  0x1D; 
+		if (e.key.keysym.sym==SDLK_UP   ) e.key.keysym.sym =  0x1E; 
+		if (e.key.keysym.sym==SDLK_DOWN ) e.key.keysym.sym =  0x1F; 
+		
 		if (e.key.keysym.sym && e.key.keysym.sym<128) {
 			keyBuffer[keyBufferEnd++] = e.key.keysym.sym;
 			if (keyBufferEnd==40) keyBufferEnd=0;
@@ -208,6 +214,7 @@ uint8_t msxhal_getch(void) {
 	if (keyBufferEnd==keyBufferStart) return c;
 	c = keyBuffer[keyBufferStart++];
 	if (keyBufferStart==40) keyBufferStart=0;
+	printf("0x%02X\n", c);
 	return c;
 }
 
