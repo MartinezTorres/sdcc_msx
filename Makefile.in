@@ -97,12 +97,17 @@ OBJ_C      = $(addprefix tmp/,$(SOURCES_C:.c=.rel))
 tmp/%.rel: %.s tmp/inc/resources.h $(HEADERS) 
 	@echo $(MSG)
 	@mkdir -p $(@D)
-	@cd tmp && $(ASM) -o ../$@ ../$<
+	@cp $< tmp/$*.source.asm
+	@cp tmp/$*.source.asm tmp/$*.optimized.asm
+	@$(ASM) -ogslp $@ tmp/$*.optimized.asm
+	@echo " "`grep "size" tmp/$*.sym | awk 'strtonum("0x"$$4) {print $$2": "strtonum("0x"$$4)" bytes"}'` 
 
 tmp/%.rel: %.c tmp/inc/resources.h $(HEADERS)
 	@echo -n $(MSG)
 	@mkdir -p $(@D)
-	@$(CCZ80) -c -D MSX $(INCLUDES) $(CCFLAGS_MSX) $< -o $@
+	@$(CCZ80) -S -D MSX $(INCLUDES) $(CCFLAGS_MSX) $< -o tmp/$*.sdcc.asm
+	@cp tmp/$*.sdcc.asm tmp/$*.optimized.asm
+	@$(ASM) -ogslp $@ tmp/$*.optimized.asm	
 	@echo " "`grep "size" tmp/$*.sym | awk 'strtonum("0x"$$4) {print $$2": "strtonum("0x"$$4)" bytes"}'` 
 
 
