@@ -3,8 +3,8 @@
 //
 // Manuel Martinez (salutte@gmail.com)
 //
-// FLAGS: -std=gnu++14 -g `pkg-config opencv --cflags --libs` -Ofast -lpthread -fopenmp -lgomp -Wno-format-nonliteral
-
+// FLAGS: -std=gnu++14 -g `pkg-config opencv --silence-errors --cflags --libs` `pkg-config opencv4 --silence-errors --cflags --libs` -Ofast -lpthread -fopenmp -lgomp -Wno-format-nonliteral
+ 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>

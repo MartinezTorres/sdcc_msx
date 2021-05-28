@@ -22,3 +22,5 @@ tmp/inc/res/gifv01/%.h: res/gifv01/%/img000001.png tmp/sdcc_msx/util/mkGif_v01
 	@echo "You may want to do make again, as we generated new source files." && false
 	
 include sdcc_msx/Makefile.in
+
+CCZ80 = sdcc_msx/bin/sdcc-3.9.0/bin/sdcc

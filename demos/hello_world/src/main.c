@@ -7,7 +7,7 @@
 #include <tile.h>
 #include <rand.h>
 
-
+T_SA SA0, SA1;
 
 #include <res/fonts/font1.png.h>
 
