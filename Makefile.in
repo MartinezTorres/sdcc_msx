@@ -23,7 +23,7 @@ INCLUDES = -Itmp/inc -Iinc -Isdcc_msx/inc -Isrc
 #VERBOSE = -V
 MAX_ALLOCS = 2000
 CCFLAGS_MSX   = --std-sdcc99 --disable-warning 110 --disable-warning 126 $(VERBOSE) -mz80 --code-loc $(ADDR_CODE) $(ADDR_CONST)  --code-size $(CODE_SIZE) --data-loc $(ADDR_DATA) --iram-size $(DATA_SIZE) --no-std-crt0 --out-fmt-ihx --max-allocs-per-node $(MAX_ALLOCS) --allow-unsafe-read --nostdlib --no-xinit-opt
-CCFLAGS_LINUX =  -g -O1 -Wall -Wextra -Winvalid-pch -Wformat=2 -Winit-self -Wno-inline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
+CCFLAGS_LINUX =  -g -O0 -Wall -Wextra -Winvalid-pch -Wformat=2 -Winit-self -Wno-inline -Wpacked -Wpointer-arith -Wlarger-than-655000 -Wmissing-declarations -Wmissing-format-attribute -Wmissing-noreturn -Wredundant-decls -Wsign-compare -Wstrict-aliasing=2 -Wswitch-enum -Wundef -Wunreachable-code -Wwrite-strings -pipe
 
 #recursive wildcard
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))
@@ -81,7 +81,7 @@ tmp/inc/res/ayfx/%.h: res/ayfx/% tmp/sdcc_msx/util/mkBinary
 	
 tmp/inc/resources.h: $(HEADERS_GEN)
 	@echo $(MSG)
-	@mkdir -p tmp/$(<D)
+	@mkdir -p tmp/inc
 	@rm -f $@
 	@for f in $(HEADERS_GEN); do echo "#include <../../$$f>"; done > $@
 	

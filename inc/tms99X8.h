@@ -55,7 +55,9 @@ MODE2_ADDRESS_CT  = 0x2000,
 MODE2_ADDRESS_PG  = 0x0000,
 MODE2_ADDRESS_SA0 = 0x1F00,
 MODE2_ADDRESS_SA1 = 0x1F80,
-MODE2_ADDRESS_SG  = 0x3800} 
+MODE2_ADDRESS_SG  = 0x3800,
+MODE4_ADDRESS_SA0 = 0x4200,
+MODE4_ADDRESS_SA1 = 0x4600,} 
 EM2_Adresses;
 
 typedef struct {
@@ -123,20 +125,45 @@ typedef struct {
 		uint8_t reg[8];
 		uint16_t flags;
 		struct {
-			struct {
-				uint8_t extvid : 1;		
-				uint8_t mode2 : 1;
-				uint8_t reserved1 : 6;
+			union {
+				struct {
+					uint8_t extvid : 1;		
+					uint8_t mode2 : 1;
+					uint8_t reserved1 : 6;
+				};
+				struct {
+					uint8_t EV : 1;		
+					uint8_t M3 : 1;
+					uint8_t M4 : 1;
+					uint8_t M5 : 1;
+					uint8_t IE1 : 1;
+					uint8_t IE2 : 1;
+					uint8_t DG : 1;
+					uint8_t reserved5 : 1;
+				};
 			};
-			struct {
-				uint8_t magnifySprites : 1;
-				uint8_t sprites16 : 1;
-				uint8_t reserved2: 1;
-				uint8_t mode3 : 1;
-				uint8_t mode1 : 1;
-				uint8_t generateInterrupts : 1;
-				uint8_t blankScreen : 1;
-				uint8_t mem416K : 1;
+			union {
+				struct {
+					uint8_t magnifySprites : 1;
+					uint8_t sprites16 : 1;
+					uint8_t reserved2: 1;
+					uint8_t mode3 : 1;
+					uint8_t mode1 : 1;
+					uint8_t generateInterrupts : 1;
+					uint8_t blankScreen : 1;
+					uint8_t mem416K : 1;
+				};
+
+				struct {
+					uint8_t MAG : 1;
+					uint8_t SI : 1;
+					uint8_t reserved6: 1;
+					uint8_t M1 : 1;
+					uint8_t M2 : 1;
+					uint8_t IE0 : 1;
+					uint8_t BL : 1;
+					uint8_t M416K : 1;
+				};
 			};
 			uint8_t pn10, ct6, pg11, sa7, sg11;
 			struct {
@@ -218,6 +245,15 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 		VDP1 = 0x40 | (dst>>8);
 	}
 
+	INLINE void TMS99X8_setPtrExt(uint16_t dst) {
+
+		VDP1 = dst>>14;
+		VDP1 = 0x80 | 14;
+
+		VDP1 = dst & 0xFF; 
+		VDP1 = 0x40 | ((dst>>8) & 0x3F);
+	}
+
 	INLINE void TMS99X8_write(uint8_t val) { VDP0 = val; }
 
 #else
@@ -242,6 +278,7 @@ void TMS99X8_setRegister(uint8_t reg, uint8_t val);
 	}
 
 	INLINE void TMS99X8_setPtr(uint16_t dst) { TMS99X8VRAM_PTR = dst; }
+	INLINE void TMS99X8_setPtrExt(uint16_t dst) { UNUSED(dst); fprintf(stderr, "Should not be called on linux\n"); }
 	INLINE void TMS99X8_write(uint8_t val) { TMS99X8VRAM_PTR = TMS99X8VRAM_PTR & 0x3FFF; TMS99X8VRAM[TMS99X8VRAM_PTR] = val; TMS99X8VRAM_PTR++; }
 #endif
 
@@ -282,19 +319,16 @@ void TMS99X8_clear();
 void TMS99X8_setFlags(TMS99X8_TFlags flags);
 
 
-
+INLINE void TMS99X8_setBorderColor(TMS99X8_BackgroundColor color) {
+	
+	TMS99X8.backdrop = color;
+	TMS99X8_syncRegister(7);
+}
 
 void TMS99X8_writeSprite8(uint8_t pos, const U8x8 s);
 void TMS99X8_writeSprite16(uint8_t pos, const U16x16 s);
 
-INLINE void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa) { 
-    if (buffer) 
-        TMS99X8_memcpy(MODE2_ADDRESS_SA1, (const uint8_t *)sa, sizeof(T_SA)); 
-    else 
-        TMS99X8_memcpy(MODE2_ADDRESS_SA0, (const uint8_t *)sa, sizeof(T_SA)); 
-}
-
-
+void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa);
 ////////////////////////////////////////////////////////////////////////
 // Debug using Border Colors (only on MSX)
 
@@ -304,7 +338,7 @@ INLINE void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa) {
 
 #else
 
-#define debugBorder(v) do { } while(false)
+#define debugBorder(v) do { TMS99X8.backdrop = v; } while(false)
 
 #endif
 

@@ -585,6 +585,52 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
+	// Generate symbols file
+	{
+		std::ofstream off(romName + ".sym");
+		for (size_t i=0; i<256; i++) {
+			
+			for (auto &rel : rels) {
+				if (rel.segment != (int)i) continue;
+				if (not rel.enabled) continue;
+				for (auto &area:  rel.areas) {
+					if (area.size==0) continue;
+					if (area.name=="_DATA") continue;
+
+					for (auto &symbol : rel.symbols) {
+						if (symbol.type != REL::SYMBOL::DEF) continue;
+						if (symbol.areaName != area.name) continue;
+						
+						std::ostringstream oss;
+						
+						char s[200];
+						snprintf(s,199,"%s: equ %08lXh\n", symbol.name.c_str(), area.addr + symbol.addr);	
+						off << s;
+					}
+				}	
+			}
+		}
+
+		for (auto &rel : rels) {
+			if (not rel.enabled) continue;
+			for (auto &area:  rel.areas) {
+				if (area.size==0) continue;
+				if (area.name!="_DATA") continue;
+
+				for (auto &symbol : rel.symbols) {
+					if (symbol.type != REL::SYMBOL::DEF) continue;
+					if (symbol.areaName != area.name) continue;
+					
+					std::ostringstream oss;
+					
+					char s[200];
+					snprintf(s,199,"%s: equ %08lXh\n", symbol.name.c_str(), area.addr + symbol.addr);	
+					off << s;
+				}
+			}	
+		}
+
+	}
 	Log(2) << "Allocated: " << (rom_ptr-0x4000) << " bytes of ROM";
 	if (rom_ptr>0x6000) throw std::runtime_error("Main segment ROM doesn't fit 8KB");
 

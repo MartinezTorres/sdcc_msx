@@ -140,20 +140,17 @@ void TMS99X8_fastcpy128(const uint8_t *src) __z88dk_fastcall { memcpy(&TMS99X8VR
 
 void TMS99X8_clear() {
 	
-	TMS99X8_setFlags(TMS99X8_M2 | TMS99X8_GINT | TMS99X8_MEM416K);
 	TMS99X8_memset(0,0,16*1024);
-	TMS99X8_setFlags(TMS99X8_M2 | TMS99X8_ENABLE | TMS99X8_GINT | TMS99X8_MEM416K);
-	
-	TMS99X8_memset(MODE2_ADDRESS_PN0, 0, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_PN1, 0, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_SA0, 208, sizeof(T_PN));
-	TMS99X8_memset(MODE2_ADDRESS_SA1, 208, sizeof(T_PN));
+
+	if (msxhal_get_msx_version() != MSX_VERSION_MSX1) {
+		TMS99X8_setPtrExt(0);
+	}
 	
 	TMS99X8_swapBuffersP = TMS99X8_activateBuffer0;
 }
 
 void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
-	
+
 	uint8_t pgPageMask = 0;
 	switch ((uint8_t)rowPages) {
 		case MODE2_ROWS_0__7:
@@ -173,7 +170,17 @@ void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
 	}
 			
 
-	TMS99X8.flags = TMS99X8_M2 | TMS99X8_GINT | TMS99X8_MEM416K;
+	TMS99X8.flags = TMS99X8_ENABLE | TMS99X8_GINT | TMS99X8_MEM416K;
+
+	if (msxhal_get_msx_version() == MSX_VERSION_MSX1) {
+
+		TMS99X8.M3 = 1;
+		TMS99X8.sa7  =  MODE2_ADDRESS_SA0 >>  7;
+	} else {
+
+		TMS99X8.M4 = 1;
+		TMS99X8.sa7  =  (MODE4_ADDRESS_SA0 >>  7) | 0x7;
+	}
 
 	TMS99X8.ct6  = (MODE2_ADDRESS_CT  >>  6) | ( (pgPageMask<<5) + 0x1F); // 0b01111111 
 	TMS99X8.pg11 = (((int16_t)MODE2_ADDRESS_PG)  >> 11) | pgPageMask; //0b00000011;
@@ -181,24 +188,27 @@ void TMS99X8_activateMode2 (EM2_RowPageFlags rowPages) {
 	//printf("PageFlags: %d\n", TMS99X8.pg11); fflush(stdout);
 	
 	TMS99X8.pn10 =  MODE2_ADDRESS_PN0 >> 10;
-	TMS99X8.sa7  =  MODE2_ADDRESS_SA0 >>  7;
 	TMS99X8.sg11 =  MODE2_ADDRESS_SG  >> 11;
 	
 	TMS99X8.backdrop  = BBlack;
 	TMS99X8.textcolor = BWhite;
 	
 	TMS99X8_syncAllRegisters();
-			
+	
 	TMS99X8_clear();
 }
-
 
 void (*TMS99X8_swapBuffersP)();
 
 void TMS99X8_activateBuffer0() {
 	
+	if (msxhal_get_msx_version() == MSX_VERSION_MSX1) {
+		TMS99X8.sa7  = MODE2_ADDRESS_SA0 >>  7; 
+	} else {
+		TMS99X8.sa7  = (MODE4_ADDRESS_SA0 >>  7) | 0x7;
+	}
+	
 	TMS99X8.pn10 = MODE2_ADDRESS_PN0 >> 10; 
-	TMS99X8.sa7  = MODE2_ADDRESS_SA0 >>  7; 
 	TMS99X8_syncRegister(2);
 	TMS99X8_syncRegister(5);
 	TMS99X8_swapBuffersP = TMS99X8_activateBuffer1;
@@ -206,12 +216,50 @@ void TMS99X8_activateBuffer0() {
 
 void TMS99X8_activateBuffer1() {
 
+	if (msxhal_get_msx_version() == MSX_VERSION_MSX1) {
+		TMS99X8.sa7  = MODE2_ADDRESS_SA1 >>  7; 
+	} else {
+		TMS99X8.sa7  = (MODE4_ADDRESS_SA1 >>  7) | 0x7;
+	}
+
 	TMS99X8.pn10 = MODE2_ADDRESS_PN1 >> 10; 
-	TMS99X8.sa7  = MODE2_ADDRESS_SA1 >>  7; 
 	TMS99X8_syncRegister(2);
 	TMS99X8_syncRegister(5);
 	TMS99X8_swapBuffersP = TMS99X8_activateBuffer0;
 }
+
+void TMS99X8_writeSpriteAttributes(EM2_Buffer buffer, const T_SA sa) { 
+	
+//	VDP1 = 8; VDP1 = 0x87;
+	
+	if (msxhal_get_msx_version() == MSX_VERSION_MSX1) {
+		if (buffer) 
+			TMS99X8_memcpy(MODE2_ADDRESS_SA1, (const uint8_t *)sa, sizeof(T_SA)); 
+		else 
+			TMS99X8_memcpy(MODE2_ADDRESS_SA0, (const uint8_t *)sa, sizeof(T_SA)); 
+	} else {
+		if (buffer) {
+			TMS99X8_setPtrExt(MODE4_ADDRESS_SA1-0x200);
+		} else {
+			TMS99X8_setPtrExt(MODE4_ADDRESS_SA0-0x200);
+		}
+		const uint8_t *p = (const uint8_t *)sa;
+		for (uint8_t i=0; i<32; i++) {
+			p++; p++; p++;
+			uint8_t c = *p++;
+			REPEAT16({
+				TMS99X8_write(c);
+				NOP();
+			});
+		}
+		TMS99X8_memcpy128((const uint8_t *)sa);
+		TMS99X8_setPtrExt(0);
+	}
+
+//	VDP1 = 0; VDP1 = 0x87;
+}
+
+
 
 
 ////////////////////////////////////////////////////////////////////////

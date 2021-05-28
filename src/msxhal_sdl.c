@@ -9,6 +9,10 @@
 // VIDEO EMULATOR
 #include <tms99X8.h>
 
+#ifndef MAX_SPRITES_PER_LINE
+#define MAX_SPRITES_PER_LINE 8
+#endif
+
 typedef struct { uint8_t r,g,b; } RGB;
 static RGB framebuffer     [TEX_HEIGHT][TEX_WIDTH];
 static RGB framebufferOld  [TEX_HEIGHT][TEX_WIDTH];
@@ -41,7 +45,7 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 	uint8_t pnMask = TMS99X8.pg11 & 3;
 	uint8_t ctMask1 = (TMS99X8.ct6>>5) & 3;
 	uint8_t ctMask2 = ((TMS99X8.ct6&31)<<3)+7;
-	
+
 	// TILES
 	for (int i=0; i<TILE_HEIGHT; i++) {
 		for (int j=0; j<TILE_WIDTH; j++) {
@@ -50,6 +54,7 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 				uint8_t c = CT[(i/8)&ctMask1][PN[i][j]&ctMask2][ii];
 				RGB *pix = &framebuffer[i*8+ii][j*8];
 				for (int jj=0; jj<8; jj++) {
+					pix[jj] = colors[TMS99X8.backdrop];
 					if (p&128) {
 						if (c>>4) {
 							pix[jj]=colors[c>>4];
@@ -82,7 +87,7 @@ static inline void drawMode2(const T_PN PN, const T_CT CT, const T_PG PG, const 
 				if (spriteLine>=8 * (1+TMS99X8.sprites16)) continue;
                 
                 if (SA[maxSprite].y==208) {  break; };
-                if (nShownSprites==4) { 
+                if (nShownSprites==MAX_SPRITES_PER_LINE) { 
                     if (TMS99X8_status._5S == 0)
                         TMS99X8_status.illegalSprite = maxSprite; 
                     TMS99X8_status._5S = 1; 
@@ -153,7 +158,7 @@ volatile uint8_t interrupt_count;
 volatile bool enable_keyboard_routine;
 
 #define N_KEYS  8831
-static bool keys[N_KEYS];
+bool keys[N_KEYS];
 static uint8_t keyBuffer[40];
 static uint8_t keyBufferStart = 0;
 static uint8_t keyBufferEnd = 0;
@@ -305,16 +310,6 @@ static int8_t displayFramebufferSDL() {
 		//Lock texture for manipulation
 		SDL_LockTexture( tex, nullptr, &mPixels, &mPitch );
 		
-		for (int i=0; i<TEX_HEIGHT; i++) {
-			for (int j=0; j<TEX_WIDTH; j++) {
-				framebufferMixed[i][j].r = (uint8_t)((framebuffer[i][j].r + framebufferOld[i][j].r)/2);
-				framebufferMixed[i][j].g = (uint8_t)((framebuffer[i][j].g + framebufferOld[i][j].g)/2);
-				framebufferMixed[i][j].b = (uint8_t)((framebuffer[i][j].b + framebufferOld[i][j].b)/2);
-				framebufferOld[i][j] = framebuffer[i][j];
-			}
-		}
-
-				
 		//Copy loaded/formatted surface pixels
 		memcpy( mPixels, framebufferMixed, sizeof(framebufferMixed));
 
@@ -393,10 +388,20 @@ void wait_frame() {
 			break;
 		}
 	}
-	
 	drawScreen();
-	
-	displayFramebufferSDL();
+
+	for (int i=0; i<TEX_HEIGHT; i++) {
+		for (int j=0; j<TEX_WIDTH; j++) {
+			framebufferMixed[i][j].r = (uint8_t)((framebuffer[i][j].r + framebufferOld[i][j].r)/2);
+			framebufferMixed[i][j].g = (uint8_t)((framebuffer[i][j].g + framebufferOld[i][j].g)/2);
+			framebufferMixed[i][j].b = (uint8_t)((framebuffer[i][j].b + framebufferOld[i][j].b)/2);
+			framebufferOld[i][j] = framebuffer[i][j];
+		}
+	}
+		
+	if (TMS99X8.pn10 == MODE2_ADDRESS_PN0 >> 10) {		
+		displayFramebufferSDL();
+	}
 	
 	uint32_t delay = SDL_GetTicks()%(1000/60);
 	SDL_Delay(1000/60-delay);

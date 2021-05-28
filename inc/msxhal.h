@@ -39,6 +39,11 @@ typedef struct {
 } TRect16;
 
 typedef struct {
+    union { int8_t x,j; };
+    union { int8_t y,i; };
+} int8_tp;
+
+typedef struct {
     union { uint8_t x,j; };
     union { uint8_t y,i; };
 } uint8_tp;
@@ -193,6 +198,7 @@ typedef enum { PAGE_A=0, PAGE_B=1, PAGE_C=2, PAGE_D=3 } Page;
     #define msxhal_call_d(segment, a) do { a(); } while(false)
     
 #else
+//	#define MODULE_SEGMENT_APPEND(module, page) &MAPPER_MODULE_ ## module ## _ ## page
 	#define MODULE_SEGMENT_APPEND(module, page) ((const uint8_t)&MAPPER_MODULE_ ## module ## _ ## page)
 	#define MODULE_SEGMENT(module, page) MODULE_SEGMENT_APPEND( module, page)
     #define CURRENT_SEGMENT(page) mapper_current_segments[page] 
@@ -377,7 +383,6 @@ INLINE void msxhal_enableR800() {
 INLINE void msxhal_request60Hz() {}
 INLINE void msxhal_enableR800() {}
 #endif
-
 
 ////////////////////////////////////////////////////////////////////////
 // ISR FUNCTIONS
