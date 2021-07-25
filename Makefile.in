@@ -59,28 +59,28 @@ tmp/%.c: tmp/inc/%.h
 	@echo -n 
 
 tmp/inc/res/fonts/%.h: res/fonts/% tmp/sdcc_msx/util/mkFont
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p tmp/$(<D)
 	@tmp/sdcc_msx/util/mkFont $< > tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
 
 tmp/inc/res/midi/%.h: res/midi/% tmp/sdcc_msx/util/mkMidi
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p tmp/$(<D)
 	@tmp/sdcc_msx/util/mkMidi -fps=50 $< tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
 
 tmp/inc/res/ayfx/%.h: res/ayfx/% tmp/sdcc_msx/util/mkBinary
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p tmp/$(<D)
 	@tmp/sdcc_msx/util/mkBinary $< > tmp/$<.c
 	@mkdir -p tmp/inc/$(<D)
 	@cproto -qve < tmp/$<.c > $@
 	
 tmp/inc/resources.h: $(HEADERS_GEN)
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p tmp/inc
 	@rm -f $@
 	@for f in $(HEADERS_GEN); do echo "#include <../../$$f>"; done > $@
@@ -95,7 +95,7 @@ OBJ_C      = $(addprefix tmp/,$(SOURCES_C:.c=.rel))
 .PRECIOUS: tmp/%.ihx $(OBJ_ASM) $(OBJ_C) tmp/%.lib $(SOURCES_C) $(HEADERS)
 
 tmp/%.rel: %.s tmp/inc/resources.h $(HEADERS) 
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@cp $< tmp/$*.source.asm
 	@cp tmp/$*.source.asm tmp/$*.optimized.asm
@@ -103,7 +103,7 @@ tmp/%.rel: %.s tmp/inc/resources.h $(HEADERS)
 	@echo " "`grep "size" tmp/$*.sym | awk 'strtonum("0x"$$4) {print $$2": "strtonum("0x"$$4)" bytes"}'` 
 
 tmp/%.rel: %.c tmp/inc/resources.h $(HEADERS)
-	@echo -n $(MSG)
+	@echo -ne $(MSG)
 	@mkdir -p $(@D)
 	@$(CCZ80) -S -D MSX $(INCLUDES) $(CCFLAGS_MSX) $< -o tmp/$*.sdcc.asm
 	@cp tmp/$*.sdcc.asm tmp/$*.optimized.asm
@@ -112,56 +112,56 @@ tmp/%.rel: %.c tmp/inc/resources.h $(HEADERS)
 
 
 tmp/%.lib: $(OBJ_C)
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@sdcclib $@ $(OBJ_C)
 
 tmp/%.ihx: $(OBJ_ASM) tmp/%.lib 
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(CCZ80) -D MSX $(INCLUDES) $(CCFLAGS_MSX) $(OBJ_ASM) tmp/$(NAME).lib -o $@
 
 out/msx/%.rom.old: tmp/%.ihx
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(HEXBIN) $< $(<:.ihx=.tmp)
 	@dd skip=16384 count=32768 if=$(<:.ihx=.tmp) of=$@ bs=1 status=none
 	@grep ".*\. bytes " tmp/$(NAME).map | awk '{val=strtonum("0x"$$3); if (val>2) printf "%12s: %6d bytes (%6.2f KiB)\n", $$1, val, val/1024}'
 
 out/msx/%.rom: pre_target $(MSX_LINKER) $(OBJ_C) $(OBJ_ASM)
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(MSX_LINKER) $(OBJ_C) $(OBJ_ASM) $@
 
 rom: out/msx/$(NAME).rom
 
 msx: out/msx/$(NAME).rom
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(OPENMSX_DEF) $< || true
 
 msx1: out/msx/$(NAME).rom
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(OPENMSX1) $< || true
 
 msx1jp: out/msx/$(NAME).rom
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(OPENMSX1_JP) $< || true
 
 msx2: out/msx/$(NAME).rom
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(OPENMSX2) $< || true
 
 msx2p: out/msx/$(NAME).rom
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(OPENMSX2P) $< || true
 
 msxtr: out/msx/$(NAME).rom
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(OPENMSXTR) $< || true
 
@@ -169,7 +169,7 @@ msxtr: out/msx/$(NAME).rom
 ### LINUX SECTION
 
 out/linux/%: pre_target $(SOURCES_C) $(HEADERS)
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(CC) -g -D LINUX $(INCLUDES) $(CCFLAGS_LINUX) $(SOURCES_C) -lSDL2 -o $@ 
 
@@ -186,12 +186,12 @@ gdb: out/linux/$(NAME)
 INCLUDE := util
 .PRECIOUS:tmp/%
 tmp/%: %.cc
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p $(@D)
 	@$(CXX) -o $@ $< $(shell echo `grep -m1 "^// FLAGS:" $< | cut -d: -f2-`)
 
 %: util/%.cc bin/% 
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@true
 
 
