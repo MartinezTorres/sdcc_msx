@@ -10,12 +10,12 @@ tmp/res/gifv01/%.c: tmp/inc/res/gifv01/%.h
 	
 .PRECIOUS: res/gifv01/%/img000001.png
 res/gifv01/%/img000001.png: res/gifv01/%.*
-	@echo $(MSG) $<
+	@echo -e $(MSG) $<
 	@sdcc_msx/util/extractGif.sh $< 200
 
 .PRECIOUS: tmp/inc/res/gifv01/%.h
 tmp/inc/res/gifv01/%.h: res/gifv01/%/img000001.png tmp/sdcc_msx/util/mkGif_v01
-	@echo $(MSG)
+	@echo -e $(MSG)
 	@mkdir -p tmp/$(<D)
 	@mkdir -p tmp/inc/$(<D)
 	@tmp/sdcc_msx/util/mkGif_v01 $*
